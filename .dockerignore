@@ -1,0 +1,21 @@
+# Node/Client
+node_modules
+client/node_modules
+client/dist
+client/build
+npm-debug.log
+
+# Golang/Server
+server/bin
+server/tmp
+server/vendor
+server/tiinpod-api
+
+# Logs & OS setup
+.DS_Store
+.env
+*.log
+.vscode
+.idea
+.git
+.gitignore

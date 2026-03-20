@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  # ----------------------------------------------------
+  # 1. POSTGRESQL (Dịch vụ 'db')
+  # ----------------------------------------------------
+  db:
+    image: postgres:16-alpine
+    container_name: tiin-pod-db
+    restart: always
+    # Sử dụng biến môi trường từ file .env để cấu hình CSDL
+    environment:
+      POSTGRES_USER: ${DB_USER:-tiinpod_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-tiinpod_pass}
+      POSTGRES_DB: ${DB_NAME:-tiinpod_db}
+    ports:
+      - "5433:5432" # Ánh xạ cổng ngoài:cổng trong
+    volumes:
+      - tiinpod_data:/var/lib/postgresql/data # Lưu trữ dữ liệu vĩnh viễn
+    healthcheck:
+      # Kiểm tra sức khỏe container
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ----------------------------------------------------
+  # 2. REDIS (Bộ đệm - Cache & Session Management)
+  # ----------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: tiinpod-redis
+    restart: always
+    ports:
+      - "6369:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - tiinpod_redis_data:/data
+
+volumes:
+  tiinpod_data:
+  tiinpod_redis_data:

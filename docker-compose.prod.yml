@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  # ----------------------------------------------------
+  # 1. CLIENT (React + Vite + Nginx)
+  # ----------------------------------------------------
+  client:
+    build: 
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: tiinpod-client-prod
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - server
+    networks:
+      - tiinpod-network
+
+  # ----------------------------------------------------
+  # 2. SERVER (Golang API)
+  # ----------------------------------------------------
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: tiinpod-server-prod
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      # Nằm trong cùng mạng Docker, nên host truyền đi là tên service: db
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=${DB_USER:-tiinpod_user}
+      - DB_PASSWORD=${DB_PASSWORD:-tiinpod_pass}
+      - DB_NAME=${DB_NAME:-tiinpod_db}
+      - GIN_MODE=release
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - tiinpod-network
+
+  # ----------------------------------------------------
+  # 3. DATABASE (PostgreSQL)
+  # ----------------------------------------------------
+  db:
+    image: postgres:16-alpine
+    container_name: tiinpod-db-prod
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-tiinpod_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-tiinpod_pass}
+      POSTGRES_DB: ${DB_NAME:-tiinpod_db}
+    volumes:
+      - tiinpod_prod_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tiinpod-network
+
+  # ----------------------------------------------------
+  # 4. REDIS
+  # ----------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: tiinpod-redis-prod
+    restart: always
+    volumes:
+      - tiinpod_prod_redis:/data
+    networks:
+      - tiinpod-network
+
+networks:
+  tiinpod-network:
+    driver: bridge
+
+volumes:
+  tiinpod_prod_data:
+  tiinpod_prod_redis:
