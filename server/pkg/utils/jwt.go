@@ -2,38 +2,34 @@ package utils
 
 import (
 	"time"
-
+	"server/config"
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// Khóa bí mật (Nên để trong file .env thực tế)
-var jwtSecret = []byte("your_super_secret_key_2026")
-
-// CustomClaims định nghĩa cấu trúc dữ liệu lưu trong Token
 type CustomClaims struct {
-	UserID uint `json:"user_id"`
+	UserID uint   `json:"user_id"`
+	Role   string `json:"role"`
 	jwt.RegisteredClaims
 }
 
-// GenerateToken tạo ra một JWT token với thời gian hết hạn tùy chỉnh
-func GenerateToken(userID uint, duration time.Duration) (string, error) {
+func GenerateToken(userID uint, role string, duration time.Duration) (string, error) {
 	claims := CustomClaims{
 		UserID: userID,
+		Role:   role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(duration)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			Issuer:    "my-awesome-app",
+			Issuer:    "tiinpod",
 		},
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(jwtSecret)
+	return token.SignedString([]byte(config.AppConfig.JWTSecret))
 }
 
-// ValidateToken kiểm tra tính hợp lệ của token và trả về Claims
 func ValidateToken(tokenString string) (*CustomClaims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &CustomClaims{}, func(token *jwt.Token) (interface{}, error) {
-		return jwtSecret, nil
+		return []byte(config.AppConfig.JWTSecret), nil
 	})
 
 	if claims, ok := token.Claims.(*CustomClaims); ok && token.Valid {

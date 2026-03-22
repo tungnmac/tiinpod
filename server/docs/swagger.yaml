@@ -1,0 +1,111 @@
+basePath: /api
+definitions:
+  handler.LoginRequest:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  handler.RegisterRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+      role:
+        type: string
+      username:
+        type: string
+    required:
+    - email
+    - password
+    - username
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@tiinpod.com
+    name: API Support
+    url: http://www.tiinpod.com/support
+  description: Đây là tài liệu API cho hệ thống thương mại điện tử TiinPod.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: TiinPod E-commerce API
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Thực hiện đăng nhập bằng username và password để nhận access token
+      parameters:
+      - description: Thông tin đăng nhập
+        in: body
+        name: loginRequest
+        required: true
+        schema:
+          $ref: '#/definitions/handler.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Đăng nhập thành công và trả về access token
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Dữ liệu không hợp lệ
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Sai tên đăng nhập hoặc mật khẩu
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Đăng nhập người dùng
+      tags:
+      - Auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Tạo tài khoản người dùng mới trong hệ thống
+      parameters:
+      - description: Thông tin đăng ký
+        in: body
+        name: registerRequest
+        required: true
+        schema:
+          $ref: '#/definitions/handler.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Đăng ký thành công
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Dữ liệu hoặc Username đã tồn tại
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Đăng ký người dùng mới
+      tags:
+      - Auth
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

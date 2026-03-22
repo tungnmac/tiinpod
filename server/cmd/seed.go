@@ -19,9 +19,9 @@ var seedCmd = &cobra.Command{
 		}
 
 		database.Connect()
-		
+
 		log.Println("Bắt đầu quá trình seed dữ liệu...")
-		seed.SeedUsers()
+		seed.SeedAll()
 		log.Println("Hoàn tất seed dữ liệu.")
 	},
 }

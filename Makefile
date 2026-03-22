@@ -44,6 +44,15 @@ server-lint:
 	@echo "Chạy Go linter..."
 	cd $(SERVER_DIR) && golangci-lint run
 
+server-seed:
+	@echo "Chạy Seed dữ liệu mặc định..."
+	cd $(SERVER_DIR) && go run main.go seed
+
+server-clean:
+	@echo "Đang làm sạch Database (DROP SCHEMA public)..."
+	docker exec tiin-pod-db psql -U tiinpod_user -d tiinpod_db -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+	@echo "Database đã được dọn dẹp. Hãy chạy 'make server-migrate' và 'make server-seed' tiếp theo."
+
 # --- CÁC LỆNH DÀNH CHO CLIENT (REACT) ---
 .PHONY: client-install client-dev client-build client-lint
 
@@ -70,8 +79,3 @@ dev: docker-up
 	@echo "Bật Client và Server song song (ấn Ctrl+C để tắt)"
 	# Chạy background server, và foreground cho client
 	@make -j 2 server-dev client-dev
-
-
-server-seed:
-	@echo "Chạy Seed dữ liệu mặc định..."
-	cd $(SERVER_DIR) && go run main.go seed
