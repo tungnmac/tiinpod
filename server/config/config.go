@@ -15,13 +15,18 @@ type Config struct {
 	DBHost     string
 	DBPort     string
 	JWTSecret  string
+
+	CloudinaryCloudName string
+	CloudinaryAPIKey    string
+	CloudinaryAPISecret string
 }
 
 var AppConfig *Config
 
 func LoadConfig() {
-	if err := godotenv.Load(); err != nil {
-		log.Println("Warning: .env file not found, using system environment variables")
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
 	}
 
 	AppConfig = &Config{
@@ -31,7 +36,11 @@ func LoadConfig() {
 		DBName:     getEnv("DB_NAME", "tiinpod"),
 		DBHost:     getEnv("DB_HOST", "localhost"),
 		DBPort:     getEnv("DB_PORT", "5432"),
-		JWTSecret:  getEnv("JWT_SECRET", "yoursecretkey"),
+		JWTSecret:  getEnv("JWT_SECRET", "your-secret-key"),
+
+		CloudinaryCloudName: os.Getenv("CLOUDINARY_CLOUD_NAME"),
+		CloudinaryAPIKey:    os.Getenv("CLOUDINARY_API_KEY"),
+		CloudinaryAPISecret: os.Getenv("CLOUDINARY_API_SECRET"),
 	}
 }
 

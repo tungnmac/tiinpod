@@ -40,6 +40,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
 
   const menuItems = [
     { name: t('home'), path: '/dashboard', icon: Home },
+    { name: t('My Templates'), path: '/my-templates', icon: LayoutDashboard },
     { name: t('orders'), path: '/orders', icon: ListOrdered },
     { name: t('products'), path: '/products', icon: ShoppingCart },
     // { name: t('inventory'), path: '/inventory', icon: Box },

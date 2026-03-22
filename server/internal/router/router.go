@@ -1,7 +1,6 @@
 package router
 
 import (
-	_ "server/docs"
 	"server/internal/handler"
 	"server/pkg/middleware"
 	"time"
@@ -9,6 +8,9 @@ import (
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
+	"github.com/ulule/limiter/v3"
+	mgin "github.com/ulule/limiter/v3/drivers/middleware/gin"
+	"github.com/ulule/limiter/v3/drivers/store/memory"
 )
 
 type Router struct {
@@ -22,10 +24,8 @@ func NewRouter(h *handler.Handlers) *Router {
 }
 
 func (r *Router) RegisterRoutes(engine *gin.Engine) {
-	// Swagger documentation route - PHẢI ĐẶT NGOÀI GROUP /API
 	engine.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	// Healthcheck endpoint
 	engine.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"status":  "up",
@@ -34,14 +34,12 @@ func (r *Router) RegisterRoutes(engine *gin.Engine) {
 		})
 	})
 
-	// Redirect root to swagger
 	engine.GET("/", func(c *gin.Context) {
 		c.Redirect(301, "/swagger/index.html")
 	})
 
 	api := engine.Group("/api")
 	{
-		// Public routes
 		auth := api.Group("/auth")
 		{
 			auth.POST("/register", r.Handlers.Auth.Register)
@@ -50,7 +48,6 @@ func (r *Router) RegisterRoutes(engine *gin.Engine) {
 			auth.POST("/logout", r.Handlers.Auth.Logout)
 		}
 
-		// Protected routes (Cần Login)
 		protected := api.Group("/")
 		protected.Use(middleware.AuthMiddleware())
 		{
@@ -58,73 +55,37 @@ func (r *Router) RegisterRoutes(engine *gin.Engine) {
 			{
 				categories.POST("", r.Handlers.Category.Create)
 				categories.GET("", r.Handlers.Category.GetAll)
-				categories.GET("/:id", r.Handlers.Category.GetByID)
-				categories.PUT("/:id", r.Handlers.Category.Update)
-				categories.DELETE("/:id", r.Handlers.Category.Delete)
 			}
 
-			products := protected.Group("/products")
+			templates := protected.Group("/product-templates")
 			{
-				products.GET("", r.Handlers.Product.GetAll)
-				products.GET("/:id", r.Handlers.Product.GetByID)
-				products.PUT("/:id", r.Handlers.Product.Update)
-				products.DELETE("/:id", r.Handlers.Product.Delete)
+				templates.GET("", r.Handlers.ProductTemplate.GetAll)
+				templates.GET("/:id", r.Handlers.ProductTemplate.GetByID)
+			}
+
+			userTemplates := protected.Group("/saved-templates")
+			{
+				// Rate limiter for upload: 5 requests per minute per user
+				rate := limiter.Rate{
+					Period: 1 * time.Minute,
+					Limit:  5,
+				}
+				store := memory.NewStore()
+				instance := limiter.New(store, rate)
+				uploadLimiter := mgin.NewMiddleware(instance)
+
+				userTemplates.POST("", r.Handlers.UserTemplate.Create)
+				userTemplates.PUT("/:id", r.Handlers.UserTemplate.Create) // Reuse Create as it handles Update if ID is provided
+				userTemplates.DELETE("/:id", r.Handlers.UserTemplate.Delete)
+				userTemplates.GET("", r.Handlers.UserTemplate.GetMyTemplates)
+				userTemplates.POST("/upload", uploadLimiter, r.Handlers.UserTemplate.PreUpload)
+				userTemplates.GET("/presigned-upload", r.Handlers.UserTemplate.GetPresignedUpload)
 			}
 
 			orders := protected.Group("/orders")
 			{
 				orders.POST("", r.Handlers.Order.Create)
 				orders.GET("", r.Handlers.Order.GetAll)
-				orders.GET("/:id", r.Handlers.Order.GetByID)
-				orders.PUT("/:id", r.Handlers.Order.Update)
-				orders.DELETE("/:id", r.Handlers.Order.Delete)
-			}
-
-			shipments := protected.Group("/shipments")
-			{
-				shipments.POST("", r.Handlers.Shipment.Create)
-				shipments.GET("", r.Handlers.Shipment.GetAll)
-				shipments.GET("/:id", r.Handlers.Shipment.GetByID)
-				shipments.PUT("/:id", r.Handlers.Shipment.Update)
-				shipments.DELETE("/:id", r.Handlers.Shipment.Delete)
-			}
-
-			cart := protected.Group("/cart")
-			{
-				cart.POST("/add", r.Handlers.Cart.AddItem)
-				cart.GET("", r.Handlers.Cart.GetCart)
-			}
-
-			checkout := protected.Group("/checkout")
-			{
-				checkout.POST("", r.Handlers.Checkout.ProcessCheckout)
-			}
-
-			payment := protected.Group("/payment")
-			{
-				payment.POST("", r.Handlers.Payment.ProcessPayment)
-			}
-
-			// Admin only routes
-			admin := protected.Group("/")
-			admin.Use(middleware.RoleMiddleware("admin"))
-			{
-				inventories := admin.Group("/inventories")
-				{
-					inventories.POST("", r.Handlers.Inventory.Create)
-					inventories.GET("", r.Handlers.Inventory.GetAll)
-					inventories.GET("/:id", r.Handlers.Inventory.GetByID)
-					inventories.PUT("/:id", r.Handlers.Inventory.Update)
-					inventories.DELETE("/:id", r.Handlers.Inventory.Delete)
-				}
-
-				files := admin.Group("/files")
-				{
-					files.POST("/upload", r.Handlers.File.UploadFile)
-					files.GET("/download/:filename", r.Handlers.File.DownloadFile)
-					files.GET("/export/products", r.Handlers.File.ExportProducts)
-					files.POST("/import/products", r.Handlers.File.ImportProducts)
-				}
 			}
 		}
 	}

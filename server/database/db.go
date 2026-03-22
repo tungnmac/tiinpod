@@ -51,6 +51,7 @@ func Migrate() {
 		&model.User{},
 		&model.Category{},
 		&model.Product{},
+		&model.ProductTemplate{},
 		&model.Order{},
 		&model.OrderItem{},
 		&model.Shipment{},
@@ -59,6 +60,7 @@ func Migrate() {
 		&model.CartItem{},
 		&model.Payment{},
 		&model.GiftCard{},
+		&model.UserTemplate{},
 	)
 	if err != nil {
 		log.Fatalf("Lỗi migrate: %v", err)

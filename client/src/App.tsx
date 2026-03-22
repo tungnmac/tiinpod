@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './features/auth/Login';
 import Dashboard from './features/dashboard/Dashboard';
+import MyTemplates from './features/dashboard/MyTemplates';
 import MainLayout from './components/layout/MainLayout';
 
 const ProtectedLayout = () => {
@@ -8,6 +9,7 @@ const ProtectedLayout = () => {
     <MainLayout>
       <Routes>
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/my-templates" element={<MyTemplates />} />
         <Route path="/products" element={<div className="p-4 text-2xl font-bold">Quản lý Sản phẩm (Coming soon...)</div>} />
         <Route path="/orders" element={<div className="p-4 text-2xl font-bold">Quản lý Đơn hàng (Coming soon...)</div>} />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />

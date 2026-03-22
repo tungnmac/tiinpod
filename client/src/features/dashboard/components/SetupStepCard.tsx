@@ -35,32 +35,36 @@ const SetupStepCard: React.FC<SetupStepCardProps> = ({
   };
 
   return (
-    <div className={`relative p-6 rounded-2xl border transition-all duration-300 ${getStatusStyles()}`}>
-      <div className="flex items-start justify-between mb-4">
-        <div className={`p-3 rounded-xl ${status === 'in-progress' ? 'bg-indigo-600 text-white' : (status === 'completed' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-600')}`}>
-          <Icon size={24} />
+    <div className={`relative p-6 rounded-2xl border transition-all duration-300 flex flex-col h-full ${getStatusStyles()}`}>
+      <div className="flex-1">
+        <div className="flex items-start justify-between mb-4">
+          <div className={`p-3 rounded-xl ${status === 'in-progress' ? 'bg-indigo-600 text-white' : (status === 'completed' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-600')}`}>
+            <Icon size={24} />
+          </div>
+          <span className="text-sm font-bold text-gray-400">Bước {step}</span>
         </div>
-        <span className="text-sm font-bold text-gray-400">Bước {step}</span>
+        
+        <h3 className="text-xl font-bold text-gray-900 mb-2 leading-tight">{title}</h3>
+        <p className="text-gray-600 text-sm mb-6 leading-relaxed line-clamp-3">
+          {description}
+        </p>
       </div>
       
-      <h3 className="text-xl font-bold text-gray-900 mb-2 leading-tight">{title}</h3>
-      <p className="text-gray-600 text-sm mb-6 leading-relaxed line-clamp-3">
-        {description}
-      </p>
-      
-      <button
-        onClick={onClick}
-        className={`flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl font-semibold transition-all duration-200 ${
-          isLocked 
-          ? 'bg-gray-200 text-gray-500 hover:bg-gray-300 active:scale-95' 
-          : status === 'completed' 
-            ? 'bg-green-600 text-white hover:bg-green-700' 
-            : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-200 active:scale-95'
-        }`}
-      >
-        {status === 'completed' ? t('completed') : t('start_now')}
-        <ArrowRight size={18} className={status === 'completed' ? 'hidden' : ''} />
-      </button>
+      <div className="mt-auto pt-4">
+        <button
+          onClick={onClick}
+          className={`flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl font-semibold transition-all duration-200 ${
+            isLocked 
+            ? 'bg-gray-200 text-gray-500 hover:bg-gray-300 active:scale-95' 
+            : status === 'completed' 
+              ? 'bg-green-600 text-white hover:bg-green-700' 
+              : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-200 active:scale-95'
+          }`}
+        >
+          {status === 'completed' ? t('completed') : t('start_now')}
+          <ArrowRight size={18} className={status === 'completed' ? 'hidden' : ''} />
+        </button>
+      </div>
       
       {status === 'completed' && (
         <div className="absolute top-1 right-1 bg-green-500 text-white p-1 rounded-full">
