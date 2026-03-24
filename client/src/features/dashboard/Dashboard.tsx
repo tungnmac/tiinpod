@@ -35,15 +35,18 @@ const Dashboard = () => {
     setIsLoading(true);
     try {
       const { data } = await api.get('/product-templates');
+      console.log("Fetched templates:", data);
       const mappedTemplates = data.map((t: any) => ({
         id: t.ID,
         name: t.name,
         sku: t.sku,
-        image: t.image_url,
+        category: t.category,
+        image_url: t.image_url,
+        views: t.views || [],
         profit: t.default_profit,
         rate: t.rating,
         reviews: t.review_count,
-        colors: t.colors.split(',').map((c: string) => {
+        colors: (t.colors || "").split(',').map((c: string) => {
           const colorMap: {[key: string]: string} = {
             'Black': 'bg-black',
             'White': 'bg-white',
@@ -57,7 +60,7 @@ const Dashboard = () => {
           };
           return colorMap[c.trim()] || 'bg-gray-400';
         }),
-        sizes: t.sizes.split(','),
+        sizes: (t.sizes || "").split(','),
         price: t.base_price
       }));
       setProductTemplates(mappedTemplates);
@@ -121,6 +124,11 @@ const Dashboard = () => {
     setIsMockupOpen(true);
   };
 
+  const handleChangeProduct = () => {
+    setIsMockupOpen(false);
+    setIsModalOpen(true);
+  };
+
   return (
     <>
       <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 max-w-[1600px] mx-auto min-h-screen">
@@ -139,6 +147,22 @@ const Dashboard = () => {
             </button>
           </div>
         </div>
+        
+        {/* Add Modals here */}
+        <DesignProductModal 
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          templates={productTemplates}
+          onSelect={handleSelectTemplate}
+          isLoading={isLoading}
+        />
+
+        <ProductMockupModal 
+          isOpen={isMockupOpen}
+          onClose={() => setIsMockupOpen(false)}
+          template={selectedTemplate}
+          onChangeProduct={handleChangeProduct}
+        />
 
         {/* Setup Progress Blocks */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">

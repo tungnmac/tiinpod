@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Layout, Search, Filter, Plus, Edit2, Trash2, ExternalLink, Calendar, Package } from 'lucide-react';
 import { savedTemplateService, UserTemplate } from '../../services/savedTemplateService';
-import ProductMockupModal from './components/ProductMockupModal';
+import UpdateUserTemplateModal from './components/UpdateUserTemplateModal';
 
 const MyTemplates: React.FC = () => {
   const [templates, setTemplates] = useState<UserTemplate[]>([]);
@@ -37,14 +37,15 @@ const MyTemplates: React.FC = () => {
     }
   };
 
-  const filteredTemplates = templates.filter(t => 
-    t.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredTemplates = useMemo(() => {
+    if (!templates) return [];
+    return templates.filter(t => (t.name || '').toLowerCase().includes(searchTerm.toLowerCase()));
+  }, [templates, searchTerm]);
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
+    <div className="p-8 max-w-7xl mx-auto animate-in fade-in duration-500">
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
         <div className="space-y-2">
           <div className="flex items-center gap-3 text-indigo-600">
             <div className="p-2 bg-indigo-50 rounded-xl">
@@ -76,7 +77,7 @@ const MyTemplates: React.FC = () => {
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
           {[1, 2, 3, 4].map(i => (
-            <div key={i} className="bg-white rounded-[2rem] h-96 border border-gray-100 animate-pulse shadow-sm" />
+            <div key={`skeleton-${i}`} className="bg-white rounded-[2rem] h-96 border border-gray-100 animate-pulse shadow-sm" />
           ))}
         </div>
       ) : filteredTemplates.length === 0 ? (
@@ -91,21 +92,27 @@ const MyTemplates: React.FC = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-          {filteredTemplates.map((template) => (
+          {filteredTemplates.map((template) => {
+            return (
             <div 
-              key={template.id} 
-              className="group bg-white rounded-[2rem] border border-gray-100 overflow-hidden hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 flex flex-col"
+              key={template.id}
+              className="group bg-white rounded-3xl border-2 border-transparent hover:border-indigo-500/20 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_20px_50px_rgb(79,70,229,0.1)] transition-all duration-500 overflow-hidden cursor-pointer"
+              onClick={() => {
+                setSelectedTemplate(template);
+                setIsEditModalOpen(true);
+              }}
             >
               {/* Card Preview */}
               <div className="relative aspect-[4/5] overflow-hidden bg-gray-50 flex items-center justify-center">
                 <img 
-                  src={template.preview_image_url} 
-                  alt={template.name} 
+                  src={template.preview_image_url || '/placeholder.png'} 
+                  alt={template.name || 'Design'} 
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-gray-900/40 via-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-6 gap-3">
                   <button 
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       setSelectedTemplate(template);
                       setIsEditModalOpen(true);
                     }}
@@ -118,7 +125,7 @@ const MyTemplates: React.FC = () => {
                 {/* Badge for Product Type */}
                 <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-xl border border-gray-100 shadow-sm flex items-center gap-1.5">
                   <Package size={14} className="text-indigo-600" />
-                  <span className="text-[11px] font-bold text-gray-700">{template.ProductTemplate?.name || 'Product'}</span>
+                  <span className="text-[11px] font-bold text-gray-700">{template.product_template?.name || 'Standard Product'}</span>
                 </div>
               </div>
 
@@ -126,14 +133,17 @@ const MyTemplates: React.FC = () => {
               <div className="p-6 space-y-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="space-y-1">
-                    <h3 className="font-extrabold text-gray-900 line-clamp-1 leading-tight">{template.name}</h3>
+                    <h3 className="font-extrabold text-gray-900 line-clamp-1 leading-tight">{template.name || 'Unnamed Design'}</h3>
                     <div className="flex items-center gap-2 text-gray-400">
                       <Calendar size={12} />
-                      <span className="text-[11px] font-bold">{new Date(template.created_at).toLocaleDateString()}</span>
+                      <span className="text-[11px] font-bold">{template.created_at ? new Date(template.created_at).toLocaleDateString() : 'N/A'}</span>
                     </div>
                   </div>
                   <button 
-                    onClick={() => handleDelete(template.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(template.id);
+                    }}
                     className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                   >
                     <Trash2 size={18} />
@@ -141,32 +151,21 @@ const MyTemplates: React.FC = () => {
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
-      {/* Re-use the existing ProductMockupModal for editing */}
-      {selectedTemplate && (
-        <ProductMockupModal
-          isOpen={isEditModalOpen}
-          onClose={() => {
-            setIsEditModalOpen(false);
-            fetchTemplates(); // Refresh list after edit
-          }}
-          template={{
-            id: selectedTemplate.product_template_id,
-            name: selectedTemplate.ProductTemplate?.name || '',
-            image: selectedTemplate.ProductTemplate?.image || '',
-            // Populate other fields if needed, or refine Modal to accept simpler template
-            sku: '', profit: 0, rate: 0, reviews: 0, colors: [], sizes: [], price: 0
-          }}
-          initialDesign={{
-            id: selectedTemplate.id,
-            name: selectedTemplate.name,
-            design_data: selectedTemplate.design_data
-          }}
-        />
-      )}
+      {/* Modal for updating user template */}
+      <UpdateUserTemplateModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setSelectedTemplate(null);
+        }}
+        userTemplate={selectedTemplate as any}
+        onSuccess={fetchTemplates}
+      />
     </div>
   );
 };

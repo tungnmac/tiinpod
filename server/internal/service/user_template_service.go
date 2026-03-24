@@ -14,18 +14,33 @@ type UserTemplateService interface {
 }
 
 type userTemplateService struct {
-	repo repository.UserTemplateRepository
+	repo                repository.UserTemplateRepository
+	productTemplateRepo repository.ProductTemplateRepository
 }
 
-func NewUserTemplateService(repo repository.UserTemplateRepository) UserTemplateService {
-	return &userTemplateService{repo: repo}
+func NewUserTemplateService(repo repository.UserTemplateRepository, productTemplateRepo repository.ProductTemplateRepository) UserTemplateService {
+	return &userTemplateService{repo: repo, productTemplateRepo: productTemplateRepo}
 }
 
 func (s *userTemplateService) Create(template *model.UserTemplate) error {
+	// Preload product template to ensure it's returned for frontend immediately
+	if template.ProductTemplateID != 0 {
+		pt, err := s.productTemplateRepo.FindByID(template.ProductTemplateID)
+		if err == nil {
+			template.ProductTemplate = *pt
+		}
+	}
 	return s.repo.Create(template)
 }
 
 func (s *userTemplateService) Update(template *model.UserTemplate) error {
+	// Ensure product template is updated/preloaded for frontend
+	if template.ProductTemplateID != 0 {
+		pt, err := s.productTemplateRepo.FindByID(template.ProductTemplateID)
+		if err == nil {
+			template.ProductTemplate = *pt
+		}
+	}
 	return s.repo.Update(template)
 }
 

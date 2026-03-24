@@ -52,6 +52,7 @@ func Migrate() {
 		&model.Category{},
 		&model.Product{},
 		&model.ProductTemplate{},
+		&model.ProductView{},
 		&model.Order{},
 		&model.OrderItem{},
 		&model.Shipment{},

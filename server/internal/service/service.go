@@ -30,6 +30,6 @@ func NewServices(repos *repository.Repositories) *Services {
 		Payment:         NewPaymentService(repos.Payment),
 		Checkout:        NewCheckoutService(repos.Cart, repos.Order, repos.Payment, repos.GiftCard),
 		File:            NewFileService(repos.Product),
-		UserTemplate:    NewUserTemplateService(repos.UserTemplate),
+		UserTemplate:    NewUserTemplateService(repos.UserTemplate, repos.ProductTemplate),
 	}
 }

@@ -9,17 +9,25 @@ export interface UserTemplate {
   design_data: string;
   created_at: string;
   updated_at: string;
-  ProductTemplate?: {
+  product_template?: {
     id: number;
     name: string;
-    image: string;
-    price: number;
+    sku: string;
+    image_url: string;
+    base_price: number;
+    default_profit: number;
+    rating: number;
+    review_count: number;
+    colors: string;
+    sizes: string;
+    category?: string;
+    views?: any[];
   };
 }
 
 export const savedTemplateService = {
   getMyTemplates: async () => {
-    const response = await api.get<UserTemplate[]>('/saved-templates');
+    const response = await api.get<UserTemplate[]>('/user-templates');
     return response.data;
   },
 
@@ -31,20 +39,20 @@ export const savedTemplateService = {
     design_data: string;
   }) => {
     if (data.id) {
-      const response = await api.put(`/saved-templates/${data.id}`, data);
+      const response = await api.put(`/user-templates/${data.id}`, data);
       return response.data;
     }
-    const response = await api.post('/saved-templates', data);
+    const response = await api.post('/user-templates', data);
     return response.data;
   },
 
   deleteTemplate: async (id: number) => {
-    const response = await api.delete(`/saved-templates/${id}`);
+    const response = await api.delete(`/user-templates/${id}`);
     return response.data;
   },
 
   getPresignedUpload: async () => {
-    const response = await api.get('/saved-templates/presigned-upload');
+    const response = await api.get('/user-templates/presigned-upload');
     return response.data;
   }
 };

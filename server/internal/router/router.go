@@ -63,7 +63,7 @@ func (r *Router) RegisterRoutes(engine *gin.Engine) {
 				templates.GET("/:id", r.Handlers.ProductTemplate.GetByID)
 			}
 
-			userTemplates := protected.Group("/saved-templates")
+			userTemplates := protected.Group("/user-templates")
 			{
 				// Rate limiter for upload: 5 requests per minute per user
 				rate := limiter.Rate{

@@ -105,6 +105,14 @@ func (h *UserTemplateHandler) Create(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update template"})
 			return
 		}
+
+		// Fetch the full template with Preloaded ProductTemplate for the response
+		fullTemplate, err := h.srv.GetByID(existing.ID)
+		if err == nil {
+			c.JSON(http.StatusOK, fullTemplate)
+			return
+		}
+
 		c.JSON(http.StatusOK, existing)
 		return
 	}
@@ -119,6 +127,13 @@ func (h *UserTemplateHandler) Create(c *gin.Context) {
 
 	if err := h.srv.Create(template); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create template"})
+		return
+	}
+
+	// Fetch the full template with Preloaded ProductTemplate for the response
+	fullTemplate, err := h.srv.GetByID(template.ID)
+	if err == nil {
+		c.JSON(http.StatusCreated, fullTemplate)
 		return
 	}
 

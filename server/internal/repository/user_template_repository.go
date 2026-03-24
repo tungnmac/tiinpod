@@ -36,12 +36,12 @@ func (r *userTemplateRepository) Delete(id uint) error {
 
 func (r *userTemplateRepository) GetByUserID(userID uint) ([]model.UserTemplate, error) {
 	var templates []model.UserTemplate
-	err := r.db.Preload("ProductTemplate").Where("user_id = ?", userID).Find(&templates).Error
+	err := r.db.Preload("ProductTemplate").Preload("ProductTemplate.Views").Where("user_id = ?", userID).Find(&templates).Error
 	return templates, err
 }
 
 func (r *userTemplateRepository) GetByID(id uint) (*model.UserTemplate, error) {
 	var template model.UserTemplate
-	err := r.db.First(&template, id).Error
+	err := r.db.Preload("ProductTemplate").Preload("ProductTemplate.Views").First(&template, id).Error
 	return &template, err
 }
