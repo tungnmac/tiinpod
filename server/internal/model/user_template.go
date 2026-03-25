@@ -1,9 +1,17 @@
 package model
 
-import "gorm.io/gorm"
+import (
+	"time"
+
+	"gorm.io/gorm"
+)
 
 type UserTemplate struct {
-	gorm.Model
+	ID        uint           `gorm:"primarykey" json:"id"`
+	CreatedAt time.Time      `json:"created_at"`
+	UpdatedAt time.Time      `json:"updated_at"`
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
+
 	UserID            uint            `json:"user_id" gorm:"not null"`
 	ProductTemplateID uint            `json:"product_template_id" gorm:"not null"`
 	ProductTemplate   ProductTemplate `json:"product_template" gorm:"foreignKey:ProductTemplateID"`

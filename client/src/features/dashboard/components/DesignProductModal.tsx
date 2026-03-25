@@ -17,7 +17,6 @@ const DesignProductModal: React.FC<DesignProductModalProps> = ({
   templates,
   onSelect,
 }) => {
-  console.log('DesignProductModal rendered with templates:', templates);
   const [selectedCategory, setSelectedCategory] = useState<string>('All Products');
   const [searchQuery, setSearchQuery] = useState<string>('');
 

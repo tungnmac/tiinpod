@@ -22,9 +22,10 @@ export interface DesignElement {
 }
 
 export interface ProductView {
-  id: string; // "front", "back", "left", "right"
-  view_name: string;
+  id: number; 
+  view_name: string; // "front", "back", "left", "right"
   image_url: string;
+  product_template_id: number;
 }
 
 export interface ProductTemplate {

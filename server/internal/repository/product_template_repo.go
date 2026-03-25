@@ -26,12 +26,12 @@ func (r *productTemplateRepository) Create(template *model.ProductTemplate) erro
 
 func (r *productTemplateRepository) FindAll() ([]model.ProductTemplate, error) {
 	var list []model.ProductTemplate
-	err := r.db.Find(&list).Error
+	err := r.db.Preload("Views").Find(&list).Error
 	return list, err
 }
 
 func (r *productTemplateRepository) FindByID(id uint) (*model.ProductTemplate, error) {
 	var item model.ProductTemplate
-	err := r.db.First(&item, id).Error
+	err := r.db.Preload("Views").First(&item, id).Error
 	return &item, err
 }

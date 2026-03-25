@@ -37,7 +37,7 @@ const Dashboard = () => {
       const { data } = await api.get('/product-templates');
       console.log("Fetched templates:", data);
       const mappedTemplates = data.map((t: any) => ({
-        id: t.ID,
+        id: t.id,
         name: t.name,
         sku: t.sku,
         category: t.category,
