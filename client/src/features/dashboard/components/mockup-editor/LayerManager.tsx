@@ -1,6 +1,6 @@
 import React from 'react';
 import { Layers, Eye, Trash2, Type, Move } from 'lucide-react';
-import { DesignElement } from './types';
+import { DesignElement } from '../../../../types/product';
 
 interface LayerManagerProps {
   elements: DesignElement[];

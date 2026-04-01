@@ -22,7 +22,7 @@ import {
   ArrowDownCircle,
   Divide
 } from 'lucide-react';
-import { DesignElement } from './types';
+import { DesignElement } from '../../../../types/product';
 
 const FONTS = [
   'Inter', 'Roboto', 'Open Sans', 'Lato', 'Oswald', 

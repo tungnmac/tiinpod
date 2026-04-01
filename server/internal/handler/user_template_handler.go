@@ -41,34 +41,44 @@ func (h *UserTemplateHandler) Create(c *gin.Context) {
 
 	// Parse design data to get image URLs
 	var designDataObj struct {
-		Transform interface{} `json:"transform"`
-		Designs   []struct {
-			URL string `json:"url"`
-		} `json:"designs"`
+		Elements  []model.DesignElement            `json:"elements"`
+		ViewsData map[string][]model.DesignElement `json:"viewsData"`
 	}
+
 	if err := json.Unmarshal([]byte(input.DesignData), &designDataObj); err == nil {
-		// If image is base64, upload to Cloudinary
 		modified := false
-		for i, design := range designDataObj.Designs {
-			// Check if URL starts with "data:image" (base64)
-			if strings.HasPrefix(design.URL, "data:image") {
-				uploadedURL, err := utils.UploadToCloudinary(design.URL)
-				if err == nil {
-					designDataObj.Designs[i].URL = uploadedURL
-					modified = true
-				} else {
-					// Fallback: check length if prefix check fails for some reason
-					if len(design.URL) > 500 {
-						uploadedURL, err := utils.UploadToCloudinary(design.URL)
-						if err == nil {
-							designDataObj.Designs[i].URL = uploadedURL
-							modified = true
-						}
+
+		// Helper function to process elements
+		processElements := func(elements []model.DesignElement) bool {
+			localModified := false
+			for i, el := range elements {
+				if el.Type == "image" && el.URL != "" && strings.HasPrefix(el.URL, "data:image") {
+					uploadedURL, err := utils.UploadToCloudinary(el.URL)
+					if err == nil {
+						elements[i].URL = uploadedURL
+						localModified = true
 					}
 				}
 			}
+			return localModified
 		}
-		// Update input.DesignData with new URLs if any were uploaded
+
+		if len(designDataObj.Elements) > 0 {
+			if processElements(designDataObj.Elements) {
+				modified = true
+			}
+		}
+
+		if designDataObj.ViewsData != nil {
+			for viewID, elements := range designDataObj.ViewsData {
+				if processElements(elements) {
+					designDataObj.ViewsData[viewID] = elements
+					modified = true
+				}
+			}
+		}
+
+		// Update input.DesignData if any images were uploaded
 		if modified {
 			newData, _ := json.Marshal(designDataObj)
 			input.DesignData = string(newData)
@@ -76,13 +86,22 @@ func (h *UserTemplateHandler) Create(c *gin.Context) {
 	}
 
 	// Get user_id from context (set by auth middleware)
-	userID, exists := c.Get("userID")
+	userIDValue, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
 
-	uid := uint(userID.(float64))
+	uid, ok := userIDValue.(uint)
+	if !ok {
+		// Fallback for cases where it might be float64 (e.g. from some JWT libraries)
+		if f, ok := userIDValue.(float64); ok {
+			uid = uint(f)
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID type in context"})
+			return
+		}
+	}
 
 	// If ID is provided, check if it belongs to the user and update
 	if input.ID != 0 {
@@ -141,13 +160,23 @@ func (h *UserTemplateHandler) Create(c *gin.Context) {
 }
 
 func (h *UserTemplateHandler) GetMyTemplates(c *gin.Context) {
-	userID, exists := c.Get("userID")
+	userIDValue, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
 
-	templates, err := h.srv.GetByUserID(uint(userID.(float64)))
+	var uid uint
+	if u, ok := userIDValue.(uint); ok {
+		uid = u
+	} else if f, ok := userIDValue.(float64); ok {
+		uid = uint(f)
+	} else {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID type in context"})
+		return
+	}
+
+	templates, err := h.srv.GetByUserID(uid)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch templates"})
 		return
@@ -164,13 +193,21 @@ func (h *UserTemplateHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	userID, exists := c.Get("userID")
+	userIDValue, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
 
-	uid := uint(userID.(float64))
+	var uid uint
+	if u, ok := userIDValue.(uint); ok {
+		uid = u
+	} else if f, ok := userIDValue.(float64); ok {
+		uid = uint(f)
+	} else {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID type in context"})
+		return
+	}
 
 	// Check ownership
 	existing, err := h.srv.GetByID(uint(id))

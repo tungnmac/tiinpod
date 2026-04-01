@@ -40,10 +40,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
 
   const menuItems = [
     { name: t('home'), path: '/dashboard', icon: Home },
-    { name: t('My Templates'), path: '/my-templates', icon: LayoutDashboard },
+    { name: t('my_templates'), path: '/my-templates', icon: LayoutDashboard },
+    { name: t('base_templates'), path: '/templates', icon: Box },
     { name: t('orders'), path: '/orders', icon: ListOrdered },
     { name: t('products'), path: '/products', icon: ShoppingCart },
-    // { name: t('inventory'), path: '/inventory', icon: Box },
     { name: t('categories'), path: '/categories', icon: Layers },
     { name: t('stores'), path: '/stores', icon: Store },
     { 
@@ -77,7 +77,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
           path: '/settings', 
           icon: Settings, 
           menus: [
-            { name: t('profile'), path: '/settings/profile', icon: User },
+            { name: t('profile_settings'), path: '/settings/profile', icon: User },
             { name: t('users'), path: '/settings/users', icon: User },
             { name: t('system'), path: '/settings/system', icon: Monitor },
             { 
@@ -85,7 +85,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
               path: '/settings/security', 
               icon: Shield, 
               menus: [
-                { name: t('password'), path: '/settings/security/password', icon: Lock },
+                { name: t('password_settings'), path: '/settings/security/password', icon: Lock },
                 { name: t('2fa'), path: '/settings/security/2fa', icon: Smartphone },
                 { name: t('logs'), path: '/settings/security/logs', icon: ClipboardList },
               ] 

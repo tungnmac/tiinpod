@@ -24,4 +24,8 @@ type ProductTemplate struct {
 	Description   string        `gorm:"type:text" json:"description"`
 	Category      string        `gorm:"size:100" json:"category"`
 	Views         []ProductView `gorm:"foreignKey:ProductTemplateID" json:"views"`
+	Provider      string        `gorm:"size:100" json:"provider"`
+	Variants      int           `gorm:"default:0" json:"variants"`
+	Specs         string        `gorm:"type:text" json:"specs"`    // Stored as JSON
+	Features      string        `gorm:"type:text" json:"features"` // Stored as JSON
 }

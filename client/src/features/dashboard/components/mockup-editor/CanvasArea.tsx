@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { DesignElement, ProductTemplate, ProductView } from './types';
+import { DesignElement, ProductTemplate, ProductView } from '../../../../types/product';
 
 interface CanvasAreaProps {
   template: ProductTemplate;

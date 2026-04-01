@@ -1,31 +1,37 @@
 package seed
 
 import (
-	"log"
-	"server/database"
-	"server/internal/model"
+"log"
+"server/database"
+"server/internal/model"
 )
 
 func SeedCategoriesAndProducts() {
-	var count int64
-	database.DB.Model(&model.Category{}).Count(&count)
-	if count > 0 {
-		return
-	}
+	database.DB.Exec("DELETE FROM inventories")
+	database.DB.Exec("DELETE FROM order_items")
+	database.DB.Exec("DELETE FROM orders")
+	database.DB.Exec("DELETE FROM products")
+	database.DB.Exec("DELETE FROM categories")
 
 	categories := []model.Category{
-		{Name: "Áo Quần", Description: "Trang phục thời trang", Slug: "ao-quan"},
-		{Name: "Phụ kiện", Description: "Phụ kiện điện thoại, túi xách", Slug: "phu-kien"},
+		{Name: "Áo Thun", Description: "Cotton 100%, 250gsm", Slug: "ao-thun"},
+		{Name: "Hoodie", Description: "Nỉ bông cao cấp", Slug: "hoodie"},
+		{Name: "Túi Tote", Description: "Vải canvas bền đẹp", Slug: "tui-tote"},
+		{Name: "Cốc Sứ", Description: "Gốm sứ tráng men", Slug: "coc-su"},
+		{Name: "Ốp Lưng", Description: "Nhựa dẻo TPU", Slug: "op-lung"},
 	}
+	
 	for i := range categories {
 		database.DB.Create(&categories[i])
 	}
 
 	products := []model.Product{
-		{CategoryID: &categories[0].ID, Name: "Áo Thun TiinPod Basic", Price: 150000, SKU: "TP-AT-001", Stock: 100},
-		{CategoryID: &categories[0].ID, Name: "Áo Hoodie", Price: 250000, SKU: "TP-HD-001", Stock: 50},
-		{CategoryID: &categories[1].ID, Name: "Túi Tote", Price: 85000, SKU: "TP-BAG-001", Stock: 200},
-		{CategoryID: &categories[1].ID, Name: "Ốp Lưng Magsafe", Price: 120000, SKU: "TP-CASE-001", Stock: 150},
+		{CategoryID: &categories[0].ID, Name: "Áo Thun Oversize Black", Price: 199000, OriginalPrice: 250000, SKU: "AT-BLK-01", Stock: 50, IsActive: true},
+		{CategoryID: &categories[0].ID, Name: "Áo Thun Oversize White", Price: 199000, OriginalPrice: 250000, SKU: "AT-WHT-02", Stock: 45, IsActive: true},
+		{CategoryID: &categories[1].ID, Name: "Hoodie Essential Grey", Price: 350000, OriginalPrice: 450000, SKU: "HD-GRY-01", Stock: 30, IsActive: true},
+		{CategoryID: &categories[2].ID, Name: "Túi Tote TiinPod Eco", Price: 99000, OriginalPrice: 150000, SKU: "TT-ECO-01", Stock: 100, IsActive: true},
+		{CategoryID: &categories[3].ID, Name: "Cốc Sứ Ceramic White", Price: 120000, OriginalPrice: 150000, SKU: "CS-WHT-01", Stock: 80, IsActive: true},
+		{CategoryID: &categories[4].ID, Name: "Ốp Lưng Magsafe Clear", Price: 150000, OriginalPrice: 200000, SKU: "OL-MAG-01", Stock: 120, IsActive: true},
 	}
 
 	for _, p := range products {
@@ -33,12 +39,12 @@ func SeedCategoriesAndProducts() {
 			inv := model.Inventory{
 				ProductID: p.ID,
 				Quantity:  p.Stock,
-				MinStock:  10,
-				Location:  "Kho Tổng",
+				MinStock:  5,
+				Location:  "Kho Hà Nội",
 				Status:    "in_stock",
 			}
 			database.DB.Create(&inv)
 		}
 	}
-	log.Println("Đã seed xong Categories, Products & Inventories.")
+	log.Println("Đã seed xong Categories, Products & Inventories mới.")
 }

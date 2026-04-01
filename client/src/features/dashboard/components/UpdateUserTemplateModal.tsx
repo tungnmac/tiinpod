@@ -16,12 +16,20 @@ import {
   PanelRightClose,
   PanelRightOpen,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Check,
+  RefreshCcw,
+  RotateCw,
+  Plus,
+  Eye,
+  Settings2 as SettingsIcon
 } from 'lucide-react';
-import { savedTemplateService, UserTemplate } from '../../../services/savedTemplateService';
+import api from '../../../services/api';
+import { savedTemplateService } from '../../../services/savedTemplateService';
+import { UserTemplate } from '../../../types/product';
 
 // Module-level imports
-import { DesignElement, ProductTemplate } from './mockup-editor/types';
+import { DesignElement, ProductTemplate } from '../../../types/product';
 import { LayerManager } from './mockup-editor/LayerManager';
 import { CanvasArea } from './mockup-editor/CanvasArea';
 import { ToolSidebar } from './mockup-editor/ToolSidebar';
@@ -45,6 +53,8 @@ export const UpdateUserTemplateModal: React.FC<UpdateUserTemplateModalProps> = (
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isRightSidebarCollapsed, setIsRightSidebarCollapsed] = useState(false);
   const [elements, setElements] = useState<DesignElement[]>([]);
+  // Cache for elements per view: { [viewId]: DesignElement[] }
+  const [elementsCache, setElementsCache] = useState<Record<string, DesignElement[]>>({});
   const [currentTemplate, setCurrentTemplate] = useState<ProductTemplate | null>(null);
   const [livePreviewUrl, setLivePreviewUrl] = useState<string | null>(null);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
@@ -52,7 +62,7 @@ export const UpdateUserTemplateModal: React.FC<UpdateUserTemplateModalProps> = (
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [uploadedGallery, setUploadedGallery] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
-  const [activeViewId, setActiveViewId] = useState<string>('front');
+  const [activeViewId, setActiveViewId] = useState<string | number>('front');
 
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const canvasCaptureRef = useRef<HTMLDivElement>(null);
@@ -60,6 +70,7 @@ export const UpdateUserTemplateModal: React.FC<UpdateUserTemplateModalProps> = (
 
   const [isDragging, setIsDragging] = useState(false);
   const [isOverTrash, setIsOverTrash] = useState(false);
+  const dragStart = useRef({ x: 0, y: 0 });
 
   const [history, setHistory] = useState<any[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
@@ -140,6 +151,9 @@ export const UpdateUserTemplateModal: React.FC<UpdateUserTemplateModalProps> = (
         color: '#000000', 
         fontSize: 24, 
         fontFamily: 'Inter',
+        fontWeight: 'normal',
+        fontStyle: 'normal',
+        textDecoration: 'none',
         textAlign: 'center',
         maxWidth: 300,
         curve: 0
@@ -151,18 +165,59 @@ export const UpdateUserTemplateModal: React.FC<UpdateUserTemplateModalProps> = (
       return newElements;
     });
     setSelectedId(newElement.id);
+    
+    // Auto-open property panel on mobile when adding element
+    if (window.innerWidth < 1024) {
+      setTimeout(() => {
+        const propPanel = document.getElementById('mobile-property-panel-update');
+        if (propPanel) propPanel.classList.remove('translate-y-full');
+      }, 100);
+    }
   }, [activeViewId, saveToHistory]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const url = event.target?.result as string;
-        setUploadedGallery(prev => [url, ...prev]);
-        addNewElement('image', { url });
+      const uploadFile = async () => {
+        try {
+          // 1. Get presigned upload parameters from BE
+          const { data: presigned } = await api.get('/user-templates/presigned-upload');
+          
+          // 2. Upload directly to Cloudinary using FormData
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('api_key', presigned.api_key);
+          formData.append('timestamp', presigned.timestamp.toString());
+          formData.append('signature', presigned.signature);
+          formData.append('folder', presigned.folder);
+          
+          const response = await fetch(presigned.upload_url, {
+            method: 'POST',
+            body: formData,
+          });
+          
+          const result = await response.json();
+          
+          if (result.secure_url) {
+            const cloudinaryUrl = result.secure_url;
+            setUploadedGallery(prev => [cloudinaryUrl, ...prev]);
+            addNewElement('image', { url: cloudinaryUrl });
+          } else {
+            throw new Error('Upload failed');
+          }
+        } catch (err) {
+          console.error("Presigned upload failed (update mode):", err);
+          // Fallback to base64
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const base64 = event.target?.result as string;
+            addNewElement('image', { url: base64 });
+          };
+          reader.readAsDataURL(file);
+        }
       };
-      reader.readAsDataURL(file);
+
+      uploadFile();
     }
   };
 
@@ -174,6 +229,76 @@ export const UpdateUserTemplateModal: React.FC<UpdateUserTemplateModalProps> = (
       saveToHistory(newElements);
       return newElements;
     });
+  };
+
+  const handleCanvasSelect = (id: string, e: React.MouseEvent) => {
+    setSelectedId(id);
+    
+    // Auto-open property panel on mobile when selecting an element
+    if (window.innerWidth < 1024) {
+      const propPanel = document.getElementById('mobile-property-panel-update');
+      if (propPanel) propPanel.classList.remove('translate-y-full');
+    }
+
+    const element = elements.find(el => el.id === id);
+    if (!element) return;
+    setIsDragging(true);
+    dragStart.current = { x: e.clientX - element.x, y: e.clientY - element.y };
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !selectedId) return;
+    
+    // Check if over trash area
+    const trashElement = document.getElementById('canvas-trash-bin-update');
+    if (trashElement) {
+      const rect = trashElement.getBoundingClientRect();
+      const isOver = e.clientX >= rect.left && e.clientX <= rect.right && 
+                     e.clientY >= rect.top && e.clientY <= rect.bottom;
+      setIsOverTrash(isOver);
+    }
+
+    updateElement(selectedId, {
+      x: e.clientX - dragStart.current.x,
+      y: e.clientY - dragStart.current.y
+    }, true);
+  };
+
+  const handleMouseUp = () => {
+    if (isDragging && selectedId) {
+      if (isOverTrash) {
+        deleteElement(selectedId);
+        setIsOverTrash(false);
+      } else {
+        saveToHistory(elements);
+      }
+    }
+    setIsDragging(false);
+    setIsOverTrash(false);
+  };
+
+  const handleViewSwitch = (newViewId: string | number) => {
+    // 1. Correctly update the elements cache with CURRENT elements before switching
+    setElementsCache(prev => {
+      const updatedCache = {
+        ...prev,
+        [activeViewId]: [...elements]
+      };
+      
+      // 2. Set active elements to the new view's data from the NEWLY updated cache
+      const nextElements = updatedCache[newViewId] || [];
+      setElements(nextElements);
+      
+      return updatedCache;
+    });
+    
+    // 3. Update active view ID
+    setActiveViewId(newViewId);
+    setSelectedId(null); // Clear selection for new view
+    
+    // 4. Update preview image
+    const targetView = currentTemplate?.views?.find(v => v.id === newViewId);
+    if (targetView) setLivePreviewUrl(targetView.image_url);
   };
 
   useEffect(() => {
@@ -188,16 +313,44 @@ export const UpdateUserTemplateModal: React.FC<UpdateUserTemplateModalProps> = (
     if (userTemplate.design_data) {
       try {
         const data = JSON.parse(userTemplate.design_data);
-        const savedElements = data.elements || [];
-        setElements(savedElements);
-        setHistory([savedElements]);
-        setHistoryIndex(0);
         
-        if (savedElements.length > 0) {
-          setSelectedId(savedElements[0].id);
-          const urls = savedElements.filter((e: any) => e.type === 'image' && e.url).map((e: any) => e.url);
-          setUploadedGallery(prev => [...new Set([...prev, ...urls])]);
+        // Support multi-view data structure
+        if (data.viewsData) {
+          setElementsCache(data.viewsData);
+          
+          let firstViewId: string | number = activeViewId;
+          const pt = userTemplate.product_template;
+          const views = pt?.views || [];
+          if (views.length > 0) {
+            const matches = views.find((v: any) => v.id === firstViewId);
+            if (!matches) firstViewId = views[0].id;
+          }
+          
+          setElements(data.viewsData[firstViewId] || []);
+          setActiveViewId(firstViewId);
+          
+          setHistory([data.viewsData]);
+          setHistoryIndex(0);
+        } else {
+          // Legacy single view
+          const savedElements = data.elements || [];
+          setElements(savedElements);
+          setElementsCache({ front: savedElements });
+          setActiveViewId('front');
+          setHistory([savedElements]);
+          setHistoryIndex(0);
         }
+        
+        // Extract all image URLs for gallery
+        const allElements = data.viewsData ? 
+          Object.values(data.viewsData).flat() as DesignElement[] : 
+          (data.elements || []) as DesignElement[];
+          
+        const urls = allElements
+          .filter(e => e.type === 'image' && e.url)
+          .map(e => e.url as string);
+        setUploadedGallery(prev => [...new Set([...prev, ...urls])]);
+
       } catch (e) {
         console.error("Failed to parse design data", e);
       }
@@ -215,34 +368,26 @@ export const UpdateUserTemplateModal: React.FC<UpdateUserTemplateModalProps> = (
         default_profit: pt.default_profit || 0,
         rating: pt.rating || 5,
         review_count: pt.review_count || 0,
-        colors: pt.colors || "",
-        sizes: pt.sizes || "",
+        colors: typeof pt.colors === 'string' ? pt.colors.split(',').map(s => s.trim()) : pt.colors || [],
+        sizes: typeof pt.sizes === 'string' ? pt.sizes.split(',').map(s => s.trim()) : pt.sizes || [],
         category: pt.category || "",
-        views: []
+        views: pt.views || [],
+        description: pt.description || "",
+        provider: pt.provider || "",
+        variants: pt.variants || 0,
+        specs: pt.specs || [],
+        features: pt.features || []
       };
-      console.log("Initialized template:", templateObj);
       setCurrentTemplate(templateObj);
-      setLivePreviewUrl(userTemplate.preview_image_url || pt.image_url);
-    } else {
-      // Fallback for cases where productTemplate is still missing
-      const templateObj: ProductTemplate = {
-        id: userTemplate.product_template_id || 0,
-        name: userTemplate.name,
-        sku: '',
-        image_url: userTemplate.preview_image_url,
-        base_price: 0,
-        price: 0,
-        default_profit: 0,
-        rating: 5,
-        review_count: 0,
-        colors: "",
-        sizes: "",
-        category: "",
-        views: []
-      };
-      console.log("Initialized fallback template:", templateObj);
-      setCurrentTemplate(templateObj);
-      setLivePreviewUrl(userTemplate.preview_image_url);
+      
+      // Select first view if available
+      if (pt.views && pt.views.length > 0 && !activeViewId) {
+        const firstView = pt.views[0];
+        setActiveViewId(firstView.id);
+        setLivePreviewUrl(firstView.image_url);
+      } else {
+        setLivePreviewUrl(userTemplate.preview_image_url || pt.image_url);
+      }
     }
 
     initializedId.current = userTemplate.id;
@@ -252,22 +397,22 @@ export const UpdateUserTemplateModal: React.FC<UpdateUserTemplateModalProps> = (
     if (isDragging) return;
 
     const timer = setTimeout(async () => {
-      if (canvasCaptureRef.current && currentTemplate && elements.length > 0) {
+      if (canvasCaptureRef.current && currentTemplate) {
         try {
           const captureEl = canvasCaptureRef.current.querySelector("[data-capture-container=\"true\"]") || canvasCaptureRef.current;
           const canvas = await html2canvas(captureEl as HTMLElement, {
             useCORS: true,
             backgroundColor: null,
-            scale: 1,
+            scale: 2,
             logging: false,
             allowTaint: true
           });
-          setLivePreviewUrl(canvas.toDataURL('image/png', 0.5));
+          setLivePreviewUrl(canvas.toDataURL('image/png', 0.8));
         } catch (err) {
           console.error("Live preview failed:", err);
         }
       }
-    }, 3000);
+    }, 1500);
     return () => clearTimeout(timer);
   }, [elements, isDragging, activeViewId, currentTemplate]);
 
@@ -275,35 +420,119 @@ export const UpdateUserTemplateModal: React.FC<UpdateUserTemplateModalProps> = (
     if (!currentTemplate || !userTemplate) return;
     setIsSaving(true);
     try {
+      // Correctly update the elements cache with CURRENT elements before saving
+      const finalCache = {
+        ...elementsCache,
+        [activeViewId]: elements
+      };
+
+      // 1. Process all elements to ensure no base64 remains using Presigned URL
+      for (const viewId in finalCache) {
+        const viewElements = finalCache[viewId] as DesignElement[];
+        for (let i = 0; i < viewElements.length; i++) {
+          const el = viewElements[i];
+          if (el.type === 'image' && el.url && el.url.startsWith('data:image')) {
+            try {
+              const { data: presigned } = await api.get('/user-templates/presigned-upload');
+              const formData = new FormData();
+              formData.append('file', el.url);
+              formData.append('api_key', presigned.api_key);
+              formData.append('timestamp', presigned.timestamp.toString());
+              formData.append('signature', presigned.signature);
+              formData.append('folder', presigned.folder);
+              
+              const response = await fetch(presigned.upload_url, { method: 'POST', body: formData });
+              const result = await response.json();
+              if (result.secure_url) {
+                viewElements[i].url = result.secure_url;
+              }
+            } catch (uploadErr) {
+              console.error("Failed to upload image element during update save:", uploadErr);
+            }
+          }
+        }
+      }
+
+      // Sync state back
+      setElementsCache(finalCache);
+      setElements(finalCache[activeViewId] || []);
+
       setSelectedId(null);
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      let previewUrl = userTemplate.preview_image_url;
+      let primaryPreviewUrl = userTemplate.preview_image_url;
+      const viewSnapshots: Record<string, string> = {};
+
+      const viewsToCapture = Object.keys(finalCache).filter(v => finalCache[v].length > 0);
+
       if (canvasCaptureRef.current) {
-        const captureEl = canvasCaptureRef.current.querySelector("[data-capture-container=\"true\"]") || canvasCaptureRef.current;
-        const canvas = await html2canvas(captureEl as HTMLElement, {
-          useCORS: true,
-          scale: 4,
-          onclone: (clonedDoc) => {
-            const uiElements = clonedDoc.querySelectorAll("#canvas-trash-bin, .selection-handle, .ring-2");
-            uiElements.forEach(el => (el as HTMLElement).style.display = "none");
+        const originalViewId = activeViewId;
+
+        for (const viewId of viewsToCapture) {
+          // Temporarily switch view for capture
+          setActiveViewId(viewId);
+          setElements(finalCache[viewId]);
+          
+          await new Promise(resolve => setTimeout(resolve, 200));
+
+          const captureEl = canvasCaptureRef.current.querySelector("[data-capture-container=\"true\"]") || canvasCaptureRef.current;
+          const canvas = await html2canvas(captureEl as HTMLElement, {
+            useCORS: true,
+            backgroundColor: null,
+            scale: 2,
+            logging: false,
+            allowTaint: false,
+          });
+          
+          const dataUrl = canvas.toDataURL('image/png', 0.8);
+          
+          try {
+            const { data: presigned } = await api.get('/user-templates/presigned-upload');
+            const formData = new FormData();
+            formData.append('file', dataUrl);
+            formData.append('api_key', presigned.api_key);
+            formData.append('timestamp', presigned.timestamp.toString());
+            formData.append('signature', presigned.signature);
+            formData.append('folder', presigned.folder);
+            
+            const response = await fetch(presigned.upload_url, { method: 'POST', body: formData });
+            const result = await response.json();
+            
+            if (result.secure_url) {
+              viewSnapshots[viewId] = result.secure_url;
+              if (viewId === 'front' || !primaryPreviewUrl) primaryPreviewUrl = result.secure_url;
+            } else {
+              viewSnapshots[viewId] = dataUrl;
+            }
+          } catch (e) {
+            console.warn("View snapshot upload failed, falling back to base64", e);
+            viewSnapshots[viewId] = dataUrl;
           }
-        });
-        previewUrl = canvas.toDataURL('image/png', 1.0);
+        }
+
+        // Restore UI state
+        setActiveViewId(originalViewId);
+        setElements(finalCache[originalViewId]);
       }
+
+      const designData = JSON.stringify({ 
+        elements: finalCache['front'] || [],
+        viewsData: finalCache,
+        viewSnapshots
+      });
 
       await savedTemplateService.saveTemplate({
         id: userTemplate.id,
         product_template_id: userTemplate.product_template_id,
         name: currentTemplate.name,
-        preview_image_url: previewUrl,
-        design_data: JSON.stringify({ elements })
+        preview_image_url: primaryPreviewUrl, // Cloudinary URL
+        design_data: designData
       });
       
       onSuccess?.();
       onClose();
-    } catch (error) {
-      alert("Failed to update template.");
+    } catch (error: any) {
+      alert(error.message || "Failed to update template.");
     } finally {
       setIsSaving(false);
     }
@@ -311,25 +540,39 @@ export const UpdateUserTemplateModal: React.FC<UpdateUserTemplateModalProps> = (
 
   const selectedElement = useMemo(() => elements.find(e => e.id === selectedId), [elements, selectedId]);
 
+  const displayTemplate = useMemo(() => {
+    if (!currentTemplate) {
+      if (userTemplate && userTemplate.product_template) {
+        const pt = userTemplate.product_template;
+        return {
+          id: pt.id,
+          name: userTemplate.name || 'Unnamed Design',
+          description: pt.description || '',
+          sku: pt.sku || 'NO-SKU',
+          image_url: pt.image_url || '',
+          views: pt.views || [],
+          category: pt.category || '',
+          provider: pt.provider || '',
+          base_price: pt.base_price || 0,
+          price: (pt.base_price || 0) + (pt.default_profit || 0),
+          default_profit: pt.default_profit || 0,
+          rating: pt.rating || 5,
+          review_count: pt.review_count || 0,
+          colors: typeof pt.colors === 'string' ? pt.colors.split(',').map(s => s.trim()) : pt.colors || [],
+          sizes: typeof pt.sizes === 'string' ? pt.sizes.split(',').map(s => s.trim()) : pt.sizes || [],
+          variants: pt.variants || 0,
+          specs: pt.specs || [],
+          features: pt.features || [],
+        };
+      }
+      return null;
+    }
+    return currentTemplate;
+  }, [currentTemplate, userTemplate]);
+
   if (!isOpen || !userTemplate) {
     return null;
   }
-
-  const displayTemplate = currentTemplate || (userTemplate && userTemplate.product_template ? {
-    id: userTemplate.product_template.id,
-    name: userTemplate.name || 'Unnamed Design',
-    sku: userTemplate.product_template.sku || 'NO-SKU',
-    image_url: userTemplate.product_template.image_url || '',
-    base_price: userTemplate.product_template.base_price || 0,
-    price: (userTemplate.product_template.base_price || 0) + (userTemplate.product_template.default_profit || 0),
-    default_profit: userTemplate.product_template.default_profit || 0,
-    rating: userTemplate.product_template.rating || 5,
-    review_count: userTemplate.product_template.review_count || 0,
-    colors: userTemplate.product_template.colors || "",
-    sizes: userTemplate.product_template.sizes || "",
-    category: userTemplate.product_template.category || "",
-    views: userTemplate.product_template.views || []
-  } : null);
 
   if (!displayTemplate) {
     return (
@@ -466,7 +709,7 @@ export const UpdateUserTemplateModal: React.FC<UpdateUserTemplateModalProps> = (
                 <PanelLeftClose size={18} />
               </button>
             </div>
-            <div className="flex-1 overflow-visible min-w-[320px]">
+            <div className="flex-1 overflow-y-auto min-w-[320px] custom-scrollbar">
               {activeTab === "layers" ? (
                 <div className="p-4 md:p-6 overflow-visible">
                   <LayerManager 
@@ -532,7 +775,7 @@ export const UpdateUserTemplateModal: React.FC<UpdateUserTemplateModalProps> = (
               <button 
                 onClick={() => {
                   const propPanel = document.getElementById('mobile-property-panel-update');
-                  if (propPanel) propPanel.classList.toggle('translate-y-0');
+                  if (propPanel) propPanel.classList.remove('translate-y-full');
                 }}
                 className="lg:hidden absolute top-4 right-4 z-[45] p-3 bg-white shadow-xl rounded-2xl text-indigo-600 border border-indigo-50 animate-bounce"
               >
@@ -545,10 +788,83 @@ export const UpdateUserTemplateModal: React.FC<UpdateUserTemplateModalProps> = (
               elements={elements} 
               selectedId={selectedId} 
               activeViewId={activeViewId}
-              onSelect={setSelectedId}
-              onViewChange={(id) => setActiveViewId(String(id))}
+              onSelect={handleCanvasSelect}
+              onViewChange={handleViewSwitch}
               captureRef={canvasCaptureRef}
             />
+
+            {/* Top View Selector Bar - Card Style with Background */}
+            {displayTemplate.views && displayTemplate.views.length > 1 && (
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 w-full max-w-xl px-2">
+                <div className="flex items-center justify-center gap-3">
+                  {displayTemplate.views.map((view: any) => {
+                    const isActive = activeViewId === view.id;
+                    return (
+                      <button
+                        key={view.id}
+                        onClick={() => handleViewSwitch(view.id)}
+                        className={`
+                          group relative flex flex-col items-center transition-all duration-500 ease-out
+                          ${isActive ? 'w-32 md:w-36' : 'w-14 md:w-16 hover:w-28 md:hover:w-32'}
+                        `}
+                      >
+                        <div className={`
+                          relative h-14 md:h-16 w-full rounded-2xl overflow-hidden border-2 transition-all duration-500 bg-white
+                          ${isActive 
+                            ? 'border-indigo-500 shadow-xl shadow-indigo-500/20 scale-105' 
+                            : 'border-transparent hover:border-white/50 shadow-md'}
+                        `}>
+                          <img 
+                            src={view.image_url} 
+                            alt={view.view_name || view.name} 
+                            className={`w-full h-full object-cover transition-transform duration-700 ${isActive ? 'scale-110' : 'group-hover:scale-125'}`} 
+                          />
+                          
+                          {/* Checkmark Icon for Active State */}
+                          {isActive && (
+                            <div className="absolute top-1 right-1 bg-indigo-500 text-white p-0.5 rounded-full shadow-lg animate-in zoom-in duration-300">
+                              <Check size={12} strokeWidth={4} />
+                            </div>
+                          )}
+
+                          {/* Label overlay for the card */}
+                          <div className={`
+                            absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end justify-center pb-2 transition-opacity duration-300
+                            ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}
+                          `}>
+                            <span className="text-[7px] md:text-[9px] font-black text-white uppercase tracking-[0.2em] truncate px-2 text-center drop-shadow-md">
+                              {view.view_name || view.name || view.id}
+                            </span>
+                          </div>
+                        </div>
+                        {isActive && (
+                          <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-8 h-1 bg-indigo-500 rounded-full shadow-[0_0_10px_#6366f1] animate-pulse"></div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Quick Trash Bin - Only visible while dragging */}
+            {isDragging && (
+              <div 
+                id="canvas-trash-bin-update"
+                className={`absolute bottom-32 right-4 md:right-8 p-5 md:p-6 rounded-full transition-all duration-300 flex items-center justify-center shadow-2xl z-50
+                  ${isOverTrash 
+                    ? 'bg-red-500 text-white scale-125 ring-4 ring-red-200' 
+                    : 'bg-white text-gray-400 scale-100'
+                  }`}
+              >
+                <Trash2 className={`${isOverTrash ? 'w-6 h-6 md:w-8 md:h-8 animate-bounce' : 'w-5 h-5 md:w-6 md:h-6'}`} />
+                {isOverTrash && (
+                  <span className="absolute -top-12 bg-red-600 text-white px-2 md:px-3 py-1 rounded text-[10px] md:text-xs font-bold whitespace-nowrap animate-in fade-in slide-in-from-bottom-2">
+                    Drop to delete
+                  </span>
+                )}
+              </div>
+            )}
 
             {/* Quick Actions Footer & Mobile Sidebar Navigation */}
             <div className="absolute bottom-4 md:bottom-8 left-1/2 -translate-x-1/2 w-full max-w-2xl px-3 md:px-4 z-30 space-y-3">
@@ -657,7 +973,7 @@ export const UpdateUserTemplateModal: React.FC<UpdateUserTemplateModalProps> = (
                 <PanelRightClose size={18} />
               </button>
             </div>
-            <div className="flex-1 min-w-[320px]">
+            <div className="flex-1 min-w-[320px] overflow-y-auto custom-scrollbar">
               <PropertyPanel 
                 selectedElement={selectedElement || null}
                 onUpdateElement={updateElement}

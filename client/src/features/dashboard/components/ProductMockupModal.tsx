@@ -25,10 +25,11 @@ import {
   ChevronUp,
   Check
 } from 'lucide-react';
+import api from '../../../services/api';
 import { savedTemplateService } from '../../../services/savedTemplateService';
 
 // Module-level imports
-import { DesignElement, ProductTemplate } from './mockup-editor/types';
+import { DesignElement, ProductTemplate } from '../../../types/product';
 import { LayerManager } from './mockup-editor/LayerManager';
 import { CanvasArea } from './mockup-editor/CanvasArea';
 import { ToolSidebar } from './mockup-editor/ToolSidebar';
@@ -268,6 +269,15 @@ export const ProductMockupModal: React.FC<ProductMockupModalProps> = ({
     const newElements = [...elements, newElement];
     setElements(newElements);
     setSelectedId(newElement.id);
+    
+    // Auto-open property panel on mobile when adding element
+    if (window.innerWidth < 1024) {
+      setTimeout(() => {
+        const propPanel = document.getElementById('mobile-property-panel');
+        if (propPanel) propPanel.classList.remove('translate-y-full');
+      }, 100);
+    }
+
     saveToHistory(newElements);
     if (type === 'image') {
       setUploadedGallery(prev => [...new Set([...prev, data.url])]);
@@ -301,16 +311,63 @@ export const ProductMockupModal: React.FC<ProductMockupModalProps> = ({
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        addNewElement('image', { url: event.target?.result });
+      // Create a local preview immediately for UX
+      const localUrl = URL.createObjectURL(file);
+      
+      const uploadFile = async () => {
+        try {
+          // 1. Get presigned upload parameters from BE
+          const { data: presigned } = await api.get('/user-templates/presigned-upload');
+          
+          // 2. Upload directly to Cloudinary using FormData
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('api_key', presigned.api_key);
+          formData.append('timestamp', presigned.timestamp.toString());
+          formData.append('signature', presigned.signature);
+          formData.append('folder', presigned.folder);
+          
+          const response = await fetch(presigned.upload_url, {
+            method: 'POST',
+            body: formData,
+          });
+          
+          const result = await response.json();
+          
+          if (result.secure_url) {
+            const cloudinaryUrl = result.secure_url;
+            setUploadedGallery(prev => [cloudinaryUrl, ...prev]);
+            addNewElement('image', { url: cloudinaryUrl });
+          } else {
+            throw new Error('Upload failed');
+          }
+        } catch (err) {
+          console.error("Presigned upload failed:", err);
+          // Fallback to base64 only if presigned fails
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const base64 = event.target?.result as string;
+            addNewElement('image', { url: base64 });
+          };
+          reader.readAsDataURL(file);
+        } finally {
+          URL.revokeObjectURL(localUrl);
+        }
       };
-      reader.readAsDataURL(file);
+
+      uploadFile();
     }
   };
 
   const handleCanvasSelect = (id: string, e: React.MouseEvent) => {
     setSelectedId(id);
+    
+    // Auto-open property panel on mobile when selecting an element
+    if (window.innerWidth < 1024) {
+      const propPanel = document.getElementById('mobile-property-panel');
+      if (propPanel) propPanel.classList.remove('translate-y-full');
+    }
+
     const element = elements.find(el => el.id === id);
     if (!element) return;
     setIsDragging(true);
@@ -376,13 +433,47 @@ export const ProductMockupModal: React.FC<ProductMockupModalProps> = ({
     if (!currentTemplate) return;
     setIsSaving(true);
     try {
-      // Ensure all current changes are synced to cache
-      const finalCache = {
-        ...elementsCache,
-        [activeViewId]: elements
-      };
+      // 1. Process all elements to ensure no base64 remains
+      const processedViewsData = JSON.parse(JSON.stringify({ ...elementsCache, [activeViewId]: elements }));
+      
+      for (const viewId in processedViewsData) {
+        const viewElements = processedViewsData[viewId] as DesignElement[];
+        for (let i = 0; i < viewElements.length; i++) {
+          const el = viewElements[i];
+          if (el.type === 'image' && el.url && el.url.startsWith('data:image')) {
+            try {
+              // 1. Get presigned upload parameters from BE
+              const { data: presigned } = await api.get('/user-templates/presigned-upload');
+              
+              // 2. Upload directly to Cloudinary using FormData
+              const formData = new FormData();
+              formData.append('file', el.url);
+              formData.append('api_key', presigned.api_key);
+              formData.append('timestamp', presigned.timestamp.toString());
+              formData.append('signature', presigned.signature);
+              formData.append('folder', presigned.folder);
+              
+              const response = await fetch(presigned.upload_url, {
+                method: 'POST',
+                body: formData,
+              });
+              
+              const result = await response.json();
+              if (result.secure_url) {
+                viewElements[i].url = result.secure_url;
+              }
+            } catch (uploadErr) {
+              console.error("Failed to upload image element during save:", uploadErr);
+            }
+          }
+        }
+      }
 
-      // Clear selection for a clean screenshot
+      // Update local state to reflect uploaded URLs (optional but good for consistency)
+      setElementsCache(processedViewsData);
+      setElements(processedViewsData[activeViewId] || []);
+
+      // 2. Clear selection for a clean screenshot
       setSelectedId(null);
       await new Promise(resolve => setTimeout(resolve, 100));
 
@@ -390,10 +481,9 @@ export const ProductMockupModal: React.FC<ProductMockupModalProps> = ({
       const viewSnapshots: Record<string, string> = {};
 
       // Logic: Iterate over only views that have ACTUAL design elements
-      const viewsToCapture = Object.keys(finalCache).filter(v => finalCache[v].length > 0);
+      const viewsToCapture = Object.keys(processedViewsData).filter(v => processedViewsData[v].length > 0);
       
       // If we're on multiple views, we capture EACH one for the production file
-      // NOTE: This could be optimized further if user only modified one
       if (canvasCaptureRef.current) {
         // Save original view ID to restore later
         const originalViewId = activeViewId;
@@ -401,7 +491,7 @@ export const ProductMockupModal: React.FC<ProductMockupModalProps> = ({
         for (const viewId of viewsToCapture) {
           // Temporarily switch view for capture
           setActiveViewId(viewId);
-          setElements(finalCache[viewId]);
+          setElements(processedViewsData[viewId]);
           
           await new Promise(resolve => setTimeout(resolve, 200)); // UI flush
 
@@ -415,18 +505,43 @@ export const ProductMockupModal: React.FC<ProductMockupModalProps> = ({
           });
           
           const dataUrl = canvas.toDataURL('image/png', 0.8);
-          viewSnapshots[viewId] = dataUrl;
-          if (viewId === 'front' || !primaryPreviewUrl) primaryPreviewUrl = dataUrl;
+          
+          // Upload the snapshot to Cloudinary using Presigned URL
+          try {
+            const { data: presigned } = await api.get('/user-templates/presigned-upload');
+            const formData = new FormData();
+            formData.append('file', dataUrl);
+            formData.append('api_key', presigned.api_key);
+            formData.append('timestamp', presigned.timestamp.toString());
+            formData.append('signature', presigned.signature);
+            formData.append('folder', presigned.folder);
+            
+            const response = await fetch(presigned.upload_url, {
+              method: 'POST',
+              body: formData,
+            });
+            const result = await response.json();
+            
+            if (result.secure_url) {
+              viewSnapshots[viewId] = result.secure_url;
+              if (viewId === 'front' || !primaryPreviewUrl) primaryPreviewUrl = result.secure_url;
+            } else {
+              viewSnapshots[viewId] = dataUrl; // fallback
+            }
+          } catch (e) {
+            console.warn("View snapshot upload failed, falling back to base64", e);
+            viewSnapshots[viewId] = dataUrl;
+          }
         }
 
         // Restore UI state
         setActiveViewId(originalViewId);
-        setElements(finalCache[originalViewId]);
+        setElements(processedViewsData[originalViewId]);
       }
 
       const designData = JSON.stringify({ 
-        elements: finalCache['front'] || [], // backward compat
-        viewsData: finalCache,
+        elements: processedViewsData['front'] || [], // backward compat
+        viewsData: processedViewsData,
         viewSnapshots // Store rendered versions per view
       });
 
@@ -434,14 +549,14 @@ export const ProductMockupModal: React.FC<ProductMockupModalProps> = ({
         id: initialDesign?.id,
         product_template_id: currentTemplate.id,
         name: currentTemplate.name || initialDesign?.name || `My Design`,
-        preview_image_url: primaryPreviewUrl, // This is the rendered mockup
+        preview_image_url: primaryPreviewUrl, // This is now a Cloudinary URL
         design_data: designData
       });
       alert(initialDesign?.id ? "Template updated successfully!" : "Template saved successfully!");
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Save error:", error);
-      alert("Failed to save template.");
+      alert(error.message || "Failed to save template.");
     } finally {
       setIsSaving(false);
     }
@@ -655,9 +770,9 @@ export const ProductMockupModal: React.FC<ProductMockupModalProps> = ({
               <button 
                 onClick={() => {
                   const propPanel = document.getElementById('mobile-property-panel');
-                  if (propPanel) propPanel.classList.toggle('translate-y-0');
+                  if (propPanel) propPanel.classList.remove('translate-y-full');
                 }}
-                className="lg:hidden absolute top-4 right-4 z-[45] p-3 bg-white shadow-xl rounded-2xl text-indigo-600 border border-indigo-50 animate-bounce"
+                className="lg:hidden absolute top-20 right-4 z-[45] p-3 bg-white shadow-xl rounded-2xl text-indigo-600 border border-indigo-50 animate-bounce"
               >
                 <Settings2 size={20} />
               </button>
@@ -858,7 +973,7 @@ export const ProductMockupModal: React.FC<ProductMockupModalProps> = ({
                 <PanelRightClose size={18} />
               </button>
             </div>
-            <div className="flex-1 min-w-[288px]">
+            <div className="flex-1 min-w-[288px] overflow-y-auto custom-scrollbar">
               <PropertyPanel 
                 selectedElement={selectedElement || null}
                 onUpdateElement={updateElement}

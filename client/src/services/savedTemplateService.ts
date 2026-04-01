@@ -1,29 +1,5 @@
 import api from './api';
-
-export interface UserTemplate {
-  id: number;
-  user_id: number;
-  product_template_id: number;
-  name: string;
-  preview_image_url: string;
-  design_data: string;
-  created_at: string;
-  updated_at: string;
-  product_template?: {
-    id: number;
-    name: string;
-    sku: string;
-    image_url: string;
-    base_price: number;
-    default_profit: number;
-    rating: number;
-    review_count: number;
-    colors: string;
-    sizes: string;
-    category?: string;
-    views?: any[];
-  };
-}
+import { UserTemplate } from '../types/product';
 
 export const savedTemplateService = {
   getMyTemplates: async () => {

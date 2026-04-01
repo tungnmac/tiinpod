@@ -2,6 +2,7 @@ package repository
 
 import (
 	"server/internal/model"
+
 	"gorm.io/gorm"
 )
 
@@ -27,13 +28,13 @@ func (r *productRepository) Create(product *model.Product) error {
 
 func (r *productRepository) FindAll() ([]model.Product, error) {
 	var list []model.Product
-	err := r.db.Find(&list).Error
+	err := r.db.Preload("Category").Find(&list).Error
 	return list, err
 }
 
 func (r *productRepository) FindByID(id uint) (*model.Product, error) {
 	var item model.Product
-	err := r.db.First(&item, id).Error
+	err := r.db.Preload("Category").First(&item, id).Error
 	return &item, err
 }
 

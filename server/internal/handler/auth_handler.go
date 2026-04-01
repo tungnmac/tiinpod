@@ -22,15 +22,15 @@ func NewAuthHandler(authService service.AuthService) *AuthHandler {
 }
 
 type LoginRequest struct {
-	Username string `json:"username" binding:"required"`
-	Password string `json:"password" binding:"required"`
+	Username string `json:"username" binding:"required" example:"admin"`
+	Password string `json:"password" binding:"required" example:"123456"`
 }
 
 type RegisterRequest struct {
-	Username string `json:"username" binding:"required"`
-	Password string `json:"password" binding:"required"`
-	Email    string `json:"email" binding:"required,email"`
-	Role     string `json:"role"`
+	Username string `json:"username" binding:"required" example:"newuser"`
+	Password string `json:"password" binding:"required" example:"password123"`
+	Email    string `json:"email" binding:"required,email" example:"new.user@example.com"`
+	Role     string `json:"role" example:"user"`
 }
 
 // @Summary Đăng ký người dùng mới

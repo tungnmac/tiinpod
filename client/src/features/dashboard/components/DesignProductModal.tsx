@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { X, Star, Plus, LayoutGrid, Shirt, Laptop, Coffee, Glasses, Search, ChevronRight } from 'lucide-react';
-import { ProductTemplate } from './mockup-editor/types';
+import { ProductTemplate } from '../../../types/product';
 
 interface DesignProductModalProps {
   isOpen: boolean;
@@ -159,10 +159,10 @@ const DesignProductModal: React.FC<DesignProductModalProps> = ({
 
                       <div className="flex items-center justify-between mt-auto pt-4 border-t border-gray-50">
                         <div className="flex -space-x-1.5 text-[8px] font-bold text-gray-400">
-                          {product.colors && typeof product.colors === 'string' ? product.colors.split(',').slice(0, 3).map((color: string, i: number) => (
+                          {product.colors && Array.isArray(product.colors) ? product.colors.slice(0, 3).map((color: string, i: number) => (
                             <div key={i} className={`w-4 h-4 rounded-full border-2 border-white ring-1 ring-gray-100 shadow-sm flex items-center justify-center`} style={{ backgroundColor: color.trim() }}></div>
                           )) : null}
-                          {product.colors && typeof product.colors === 'string' && product.colors.split(',').length > 3 && <span className="ml-1 leading-4">+{product.colors.split(',').length - 3}</span>}
+                          {product.colors && Array.isArray(product.colors) && product.colors.length > 3 && <span className="ml-1 leading-4">+{product.colors.length - 3}</span>}
                         </div>
                         <span className="text-sm font-black text-gray-900 tracking-tight">From ${product.base_price || 0}</span>
                       </div>

@@ -1,6 +1,6 @@
 import React, { memo } from 'react';
 import { Upload, Plus, Type, RotateCw, Maximize2 } from 'lucide-react';
-import { DesignElement } from './types';
+import { DesignElement } from '../../../../types/product';
 
 interface ToolSidebarProps {
   activeTab: 'design' | 'text' | 'layers' | 'settings';

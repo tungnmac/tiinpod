@@ -1,6 +1,7 @@
 package router
 
 import (
+	_ "server/docs"
 	"server/internal/handler"
 	"server/pkg/middleware"
 	"time"
@@ -55,6 +56,16 @@ func (r *Router) RegisterRoutes(engine *gin.Engine) {
 			{
 				categories.POST("", r.Handlers.Category.Create)
 				categories.GET("", r.Handlers.Category.GetAll)
+			}
+
+			// Thêm các endpoint cho Products
+			products := protected.Group("/products")
+			{
+				products.POST("", r.Handlers.Product.Create)
+				products.GET("", r.Handlers.Product.GetAll)
+				products.GET("/:id", r.Handlers.Product.GetByID)
+				products.PUT("/:id", r.Handlers.Product.Update)
+				products.DELETE("/:id", r.Handlers.Product.Delete)
 			}
 
 			templates := protected.Group("/product-templates")

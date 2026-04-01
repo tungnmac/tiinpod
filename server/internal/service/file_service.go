@@ -55,7 +55,7 @@ func (s *fileService) ExportProductsCSV() (string, error) {
 		writer.Write([]string{
 			fmt.Sprintf("%d", p.ID),
 			p.Name,
-			fmt.Sprintf("%d", p.Price),
+			fmt.Sprintf("%f", p.Price),
 			p.SKU,
 		})
 	}
