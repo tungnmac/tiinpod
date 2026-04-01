@@ -40,3 +40,15 @@ vendor/
 *.njsproj
 *.sln
 *.sw?
+
+# Access tokens and API keys
+*.pem
+*.key
+*.crt
+*.cer
+*.p12
+*.pfx
+*.env 
+*/login-*.json
+*/login_*.json
+*/credentials-*.json
