@@ -81,7 +81,7 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = memo(({
           <div className="space-y-6">
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <label className="text-[10px] text-gray-700 font-bold uppercase">Scale: {(selectedElement.scale * 100).toFixed(0)}%</label>
+                <label className="text-[10px] text-gray-700 font-bold uppercase italic">Size: {((selectedElement.width || 200) * selectedElement.scale).toFixed(0)}px</label>
               </div>
               <input 
                 type="range" min="0.1" max="5" step="0.05"

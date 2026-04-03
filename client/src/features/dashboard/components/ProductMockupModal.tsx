@@ -222,16 +222,43 @@ export const ProductMockupModal: React.FC<ProductMockupModalProps> = ({
     const timer = setTimeout(async () => {
       if (!isDragging && canvasCaptureRef.current && currentTemplate) {
         try {
-          const captureEl = canvasCaptureRef.current.querySelector('[data-capture-container="true"]') || canvasCaptureRef.current;
-          const canvas = await html2canvas(captureEl as HTMLElement, {
+          const captureEl = canvasCaptureRef.current.querySelector('[data-capture-container="true"]') as HTMLElement;
+          if (!captureEl) return;
+
+          // Crucial: Use the exact dimensions of the reference element for a standard high-quality output
+          // We set a standard large dimension for the "independent" clean image
+          const standardWidth = 1200;
+          const standardHeight = 1500;
+          const originalWidth = captureEl.offsetWidth;
+          const scaleFactor = standardWidth / originalWidth;
+
+          const canvas = await html2canvas(captureEl, {
             useCORS: true,
             backgroundColor: null,
-            scale: 2,
+            scale: 2, // 2x for professional sharpness (2400x3000px roughly)
             logging: false,
-            allowTaint: true
+            allowTaint: true,
+            width: originalWidth,
+            height: captureEl.offsetHeight,
+            onclone: (clonedDoc) => {
+              const el = clonedDoc.querySelector('[data-capture-container="true"]') as HTMLElement;
+              if (el) {
+                // Remove all UI artifacts for a clean independent image
+                el.style.boxShadow = 'none';
+                el.style.borderRadius = '0';
+                el.style.border = 'none';
+                el.style.backgroundColor = 'transparent';
+                
+                // Hide design area borders/dashed lines if any
+                const designArea = el.querySelector('.border-dashed');
+                if (designArea) (designArea as HTMLElement).style.border = 'none';
+              }
+            }
           });
-          // Update visualization only, NEVER overwrite currentTemplate.image_url
-          setLivePreviewUrl(canvas.toDataURL('image/png', 0.8));
+          
+          // Generate a high-quality, independent PNG data URL
+          const highResImageData = canvas.toDataURL('image/png', 1.0);
+          setLivePreviewUrl(highResImageData);
         } catch (err) {
           console.error("Live preview failed:", err);
         }
@@ -253,6 +280,8 @@ export const ProductMockupModal: React.FC<ProductMockupModalProps> = ({
       rotate: 0,
       opacity: 100,
       isVisible: true,
+      width: 200,
+      height: 200,
       ...(type === 'image' ? { url: data.url } : { 
         text: 'New Text', 
         color: '#000000', 
@@ -406,27 +435,26 @@ export const ProductMockupModal: React.FC<ProductMockupModalProps> = ({
   };
 
   const handleViewSwitch = (newViewId: string | number) => {
-    // 1. Correctly update the elements cache with CURRENT elements before switching
-    setElementsCache(prev => {
-      const updatedCache = {
-        ...prev,
-        [activeViewId]: [...elements]
-      };
-      
-      // 2. Set active elements to the new view's data from the NEWLY updated cache
-      const nextElements = updatedCache[newViewId] || [];
-      setElements(nextElements);
-      
-      return updatedCache;
-    });
+    // 1. Lưu các layer hiện tại vào cache của view cũ
+    const updatedCache = {
+      ...elementsCache,
+      [activeViewId]: [...elements]
+    };
     
-    // 3. Update active view ID
+    // 2. Lấy các layer từ cache của view mới
+    const nextElements = updatedCache[newViewId] || [];
+    
+    // 3. Cập nhật state đồng bộ
+    setElementsCache(updatedCache);
+    setElements(nextElements);
     setActiveViewId(newViewId);
-    setSelectedId(null); // Clear selection for new view
+    setSelectedId(null); 
     
-    // 4. Update preview image
+    // 4. Cập nhật ảnh preview chính ngay lập tức
     const targetView = currentTemplate?.views?.find(v => v.id === newViewId);
-    if (targetView) setLivePreviewUrl(targetView.image_url);
+    if (targetView) {
+      setLivePreviewUrl(targetView.image_url);
+    }
   };
 
   const handleSave = async () => {
@@ -784,7 +812,7 @@ export const ProductMockupModal: React.FC<ProductMockupModalProps> = ({
               selectedId={selectedId} 
               activeViewId={activeViewId}
               onSelect={handleCanvasSelect}
-              onViewChange={setActiveViewId}
+              onViewChange={handleViewSwitch}
               captureRef={canvasCaptureRef}
             />
 
@@ -795,7 +823,6 @@ export const ProductMockupModal: React.FC<ProductMockupModalProps> = ({
                   <div className="flex items-center justify-center gap-3">
                     {currentTemplate.views.map((view) => {
                       const isActive = activeViewId === view.id;
-                      console.log(isActive, view, activeViewId);
                       return (
                         <button
                           key={view.id}
@@ -898,7 +925,7 @@ export const ProductMockupModal: React.FC<ProductMockupModalProps> = ({
                 <div className="flex items-center gap-3 md:gap-6 overflow-hidden">
                   <button 
                     onClick={() => setIsPreviewModalOpen(true)}
-                    className="w-14 h-14 md:w-20 md:h-20 flex-shrink-0 rounded-xl md:rounded-2xl border border-gray-100 bg-gray-50 flex items-center justify-center p-1 relative group overflow-hidden transition-all hover:ring-2 hover:ring-indigo-500 hover:ring-offset-2 shadow-sm"
+                    className="w-14 h-14 md:w-20 md:h-20 flex-shrink-0 rounded-xl md:rounded-2xl border border-gray-100 bg-gray-50 flex items-center justify-center p-0 relative group overflow-hidden transition-all hover:ring-2 hover:ring-indigo-500 hover:ring-offset-2 shadow-sm"
                     title="Click to view full preview"
                   >
                     <img 
@@ -991,19 +1018,19 @@ export const ProductMockupModal: React.FC<ProductMockupModalProps> = ({
           onClick={() => setIsPreviewModalOpen(false)}
         >
           <div 
-            className="relative max-w-4xl w-full bg-white rounded-[3rem] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 flex flex-col items-center justify-center p-2"
+            className="relative max-w-4xl w-full bg-white rounded-[3rem] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 flex flex-col items-center justify-center p-0"
             onClick={(e) => e.stopPropagation()}
           >
             <button 
               onClick={() => setIsPreviewModalOpen(false)}
-              className="absolute top-6 right-6 p-3 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-full transition-all z-10"
+              className="absolute top-6 right-6 p-3 bg-white/80 backdrop-blur-md hover:bg-white text-gray-600 rounded-full transition-all z-20 shadow-lg border border-gray-100"
             >
               <X size={24} />
             </button>
-            <div className="w-full aspect-[4/5] max-h-[80vh] flex items-center justify-center bg-gray-50">
+            <div className="w-full aspect-[4/5] max-h-[80vh] flex items-center justify-center bg-white p-4">
               <img 
                 src={livePreviewUrl || currentTemplate.image_url} 
-                className="w-full h-full object-cover" 
+                className="w-full h-full object-contain drop-shadow-2xl" 
                 alt="Mockup Preview" 
               />
             </div>

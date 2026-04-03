@@ -119,9 +119,20 @@ const PublicTemplatesList: React.FC = () => {
               <tbody className="divide-y divide-gray-50">
                 {currentItems.length > 0 ? currentItems.map(template => (
                   <tr key={template.id} className="hover:bg-gray-50/25 transition-colors group">
-                    <td className="px-8 py-5">
-                      <div className="font-bold text-gray-900 cursor-pointer hover:text-indigo-600 transition-colors" onClick={() => navigate(`/templates/${template.id}`)}>{template.name}</div>
-                      <div className="text-xs text-gray-400 font-medium">{template.type || 'Standard'}</div>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 md:w-16 md:h-16 rounded-xl overflow-hidden flex-shrink-0 shadow-md bg-gray-50">
+                          <img 
+                            src={template.image_url || 'https://via.placeholder.com/150'} 
+                            alt={template.name}
+                            className="w-full h-full object-cover" 
+                          />
+                        </div>
+                        <div>
+                          <div className="font-bold text-gray-900 cursor-pointer hover:text-indigo-600 transition-colors" onClick={() => navigate(`/templates/${template.id}`)}>{template.name}</div>
+                          <div className="text-xs text-gray-400 font-medium">{template.type || 'Standard'}</div>
+                        </div>
+                      </div>
                     </td>
                     <td className="px-6 py-5">
                       <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-lg text-[10px] font-black uppercase tracking-wider">

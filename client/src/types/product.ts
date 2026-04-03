@@ -16,6 +16,8 @@ export interface DesignElement {
   x: number;
   y: number;
   scale: number;
+  width?: number;
+  height?: number;
   rotate: number;
   opacity: number;
   isVisible: boolean;
