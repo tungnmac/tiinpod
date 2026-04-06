@@ -52,14 +52,16 @@ export const CanvasArea: React.FC<CanvasAreaProps> = memo(({
                 style={{
                   left: '50%',
                   top: '50%',
-                  transform: `translate(calc(-50% + ${el.x}px), calc(-50% + ${el.y}px)) 
-                            rotate(${el.rotate}deg)`,
-                  opacity: el.opacity / 100,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
                   whiteSpace: 'pre',
                   width: el.type === 'image' ? `${(el.width || 200)}px` : 'fit-content',
                   height: 'fit-content',
-                  scale: `${el.scale}`
+                  transform: `translate(calc(-50% + ${el.x}px), calc(-50% + ${el.y}px)) 
+                            rotate(${el.rotate}deg)
+                            scale(${(el.scale || 1) * 100}%)`,
+                  opacity: el.opacity / 100,
                 }}
               >
                 {el.type === 'image' ? (

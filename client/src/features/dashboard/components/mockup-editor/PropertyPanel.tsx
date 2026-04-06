@@ -43,6 +43,19 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = memo(({
   onDelete,
   onSaveHistory
 }) => {
+  const textInputRef = React.useRef<HTMLTextAreaElement>(null);
+
+  React.useEffect(() => {
+    if (selectedElement?.type === 'text') {
+      // Focus if it's a new element (just added) or if explicitly requested
+      // We check if it's "New Text" to guess it's a fresh creation
+      if (selectedElement.text === 'New Text') {
+        textInputRef.current?.focus();
+        textInputRef.current?.select();
+      }
+    }
+  }, [selectedElement?.id, selectedElement?.type]);
+
   if (!selectedElement) {
     return (
       <div className="w-full h-full flex flex-col items-center justify-center p-8 text-center bg-white border-l border-gray-100">
@@ -73,46 +86,54 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = memo(({
       </div>
 
       <div className="flex-1 overflow-y-auto p-6 space-y-8">
-        {/* Common Controls: Transform */}
-        <section className="space-y-4">
-          <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-            <Maximize2 size={12} /> Transform
-          </h4>
-          <div className="space-y-6">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <label className="text-[10px] text-gray-700 font-bold uppercase italic">Size: {((selectedElement.width || 200) * selectedElement.scale).toFixed(0)}px</label>
-              </div>
-              <input 
-                type="range" min="0.1" max="5" step="0.05"
-                value={selectedElement.scale}
-                onChange={(e) => onUpdateElement(selectedElement.id, { scale: parseFloat(e.target.value) }, true)}
-                onMouseUp={() => onSaveHistory()}
-                className="w-full h-1 bg-gray-200 rounded-lg appearance-none accent-indigo-600"
-              />
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <label className="text-[10px] text-gray-700 font-bold uppercase text-left">Rotation: {selectedElement.rotate}°</label>
-              </div>
-              <input 
-                type="range" min="0" max="360"
-                value={selectedElement.rotate}
-                onChange={(e) => onUpdateElement(selectedElement.id, { rotate: parseInt(e.target.value) }, true)}
-                onMouseUp={() => onSaveHistory()}
-                className="w-full h-1 bg-gray-200 rounded-lg appearance-none accent-indigo-600"
-              />
-            </div>
-          </div>
-        </section>
-
-        {/* Text-Specific Controls */}
+        {/* Text Engine: Input & Content prioritized at top */}
         {selectedElement.type === 'text' && (
-          <section className="space-y-4 pt-4 border-t border-gray-50">
+          <section className="space-y-4">
             <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-              <Type size={12} /> Text Styling
+              <TypeIcon size={12} /> Text Engine
             </h4>
             <div className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-[10px] text-gray-700 font-bold uppercase text-left">Content</label>
+                <textarea 
+                  ref={textInputRef}
+                  value={selectedElement.text}
+                  onChange={(e) => onUpdateElement(selectedElement.id, { text: e.target.value })}
+                  onBlur={() => onSaveHistory()}
+                  className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm font-medium"
+                  rows={2}
+                  placeholder="Enter your text..."
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2 text-left">
+                  <label className="text-[10px] text-gray-700 font-bold uppercase flex items-center gap-1.5">
+                    <Palette size={10} /> Color
+                  </label>
+                  <input 
+                    type="color"
+                    value={selectedElement.color}
+                    onChange={(e) => onUpdateElement(selectedElement.id, { color: e.target.value })}
+                    onInput={() => {}} 
+                    onBlur={() => onSaveHistory()}
+                    className="w-full h-10 p-1 bg-gray-50 border border-gray-100 rounded-xl cursor-pointer"
+                  />
+                </div>
+                <div className="space-y-2 text-left">
+                  <label className="text-[10px] text-gray-700 font-bold uppercase flex items-center gap-1.5">
+                    <Baseline size={10} /> Font Size
+                  </label>
+                  <input 
+                    type="number" min="8" max="200"
+                    value={selectedElement.fontSize}
+                    onChange={(e) => onUpdateElement(selectedElement.id, { fontSize: parseInt(e.target.value) })}
+                    onBlur={() => onSaveHistory()}
+                   className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-xs font-bold focus:bg-white transition-all"
+                  />
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <label className="text-[10px] text-gray-700 font-bold uppercase text-left">Font Family</label>
                 <select 
@@ -154,7 +175,47 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = memo(({
                   <Underline size={16} />
                 </button>
               </div>
+            </div>
+          </section>
+        )}
 
+        {/* Common Controls: Transform */}
+        <section className="space-y-4 pt-4 border-t border-gray-50">
+          <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+            <Maximize2 size={12} /> Transform
+          </h4>
+          <div className="space-y-6">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] text-gray-700 font-bold uppercase italic">Scale: {(selectedElement.scale * 100).toFixed(0)}%</label>
+              </div>
+              <input 
+                type="range" min="0.1" max="5" step="0.05"
+                value={selectedElement.scale}
+                onChange={(e) => onUpdateElement(selectedElement.id, { scale: parseFloat(e.target.value) }, true)}
+                onMouseUp={() => onSaveHistory()}
+                className="w-full h-1 bg-gray-200 rounded-lg appearance-none accent-indigo-600"
+              />
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] text-gray-700 font-bold uppercase text-left">Rotation: {selectedElement.rotate}°</label>
+              </div>
+              <input 
+                type="range" min="0" max="360"
+                value={selectedElement.rotate}
+                onChange={(e) => onUpdateElement(selectedElement.id, { rotate: parseInt(e.target.value) }, true)}
+                onMouseUp={() => onSaveHistory()}
+                className="w-full h-1 bg-gray-200 rounded-lg appearance-none accent-indigo-600"
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* Alignment & Layout (Secondary) */}
+        {selectedElement.type === 'text' && (
+          <section className="space-y-4 pt-4 border-t border-gray-50">
+            <div className="space-y-6">
               <div className="flex bg-gray-50 p-1 rounded-xl border border-gray-100 items-center justify-between">
                 <button 
                   onClick={() => onUpdateElement(selectedElement.id, { textAlign: 'left' })}
@@ -209,15 +270,9 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = memo(({
                     </button>
                     <button 
                       onClick={() => onUpdateElement(selectedElement.id, { curve: -40 })}
-                      className="p-1 px-2 text-[8px] font-black uppercase bg-gray-50 border border-gray-100 rounded-lg hover:bg-indigo-50 hover:text-indigo-600 transition-all flex items-center gap-1"
+                      className="p-1 px-2 text-[8px] font-black uppercase bg-gray-50 border border-gray-100 rounded-lg hover:bg-indigo-50 hover:text-indigo-100/50 transition-all flex items-center gap-1"
                     >
                       <ArrowUpCircle size={10} /> Arc Up
-                    </button>
-                    <button 
-                      onClick={() => onUpdateElement(selectedElement.id, { curve: 0 })}
-                      className="p-1 px-2 text-[8px] font-black uppercase bg-gray-50 border border-gray-100 rounded-lg hover:bg-gray-100 transition-all"
-                    >
-                      Flat
                     </button>
                   </div>
                 </div>
@@ -235,45 +290,6 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = memo(({
                   <div className={`p-2 rounded-lg ${selectedElement.curve && selectedElement.curve > 0 ? 'bg-indigo-50 text-indigo-600' : 'text-gray-300'}`}>
                     <ArrowDownCircle size={20} />
                   </div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[10px] text-gray-700 font-bold uppercase text-left">Content</label>
-                <textarea 
-                  value={selectedElement.text}
-                  onChange={(e) => onUpdateElement(selectedElement.id, { text: e.target.value })}
-                  onBlur={() => onSaveHistory()}
-                  className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm font-medium"
-                  rows={3}
-                  placeholder="Enter your text..."
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2 text-left">
-                  <label className="text-[10px] text-gray-700 font-bold uppercase flex items-center gap-1.5">
-                    <Baseline size={10} /> Font Size
-                  </label>
-                  <input 
-                    type="number" min="8" max="200"
-                    value={selectedElement.fontSize}
-                    onChange={(e) => onUpdateElement(selectedElement.id, { fontSize: parseInt(e.target.value) })}
-                    onBlur={() => onSaveHistory()}
-                   className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-xs font-bold focus:bg-white transition-all"
-                  />
-                </div>
-                <div className="space-y-2 text-left">
-                  <label className="text-[10px] text-gray-700 font-bold uppercase flex items-center gap-1.5">
-                    <Palette size={10} /> Color
-                  </label>
-                  <input 
-                    type="color"
-                    value={selectedElement.color}
-                    onChange={(e) => onUpdateElement(selectedElement.id, { color: e.target.value })}
-                    onInput={() => {}} 
-                    onBlur={() => onSaveHistory()}
-                    className="w-full h-10 p-1 bg-gray-50 border border-gray-100 rounded-xl cursor-pointer"
-                  />
                 </div>
               </div>
             </div>

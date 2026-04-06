@@ -220,52 +220,44 @@ export const ProductMockupModal: React.FC<ProductMockupModalProps> = ({
   // Debounced live preview update
   useEffect(() => {
     const timer = setTimeout(async () => {
-      if (!isDragging && canvasCaptureRef.current && currentTemplate) {
+      if (canvasCaptureRef.current && currentTemplate) {
         try {
           const captureEl = canvasCaptureRef.current.querySelector('[data-capture-container="true"]') as HTMLElement;
           if (!captureEl) return;
 
-          // Crucial: Use the exact dimensions of the reference element for a standard high-quality output
-          // We set a standard large dimension for the "independent" clean image
-          const standardWidth = 1200;
-          const standardHeight = 1500;
-          const originalWidth = captureEl.offsetWidth;
-          const scaleFactor = standardWidth / originalWidth;
+          const img = captureEl.querySelector('img') as HTMLImageElement;
+          const naturalWidth = img?.naturalWidth || captureEl.offsetWidth;
 
           const canvas = await html2canvas(captureEl, {
             useCORS: true,
             backgroundColor: null,
-            scale: 2, // 2x for professional sharpness (2400x3000px roughly)
             logging: false,
             allowTaint: true,
-            width: originalWidth,
+            width: captureEl.offsetWidth,
             height: captureEl.offsetHeight,
+            scale: 0.5, // Much faster for live preview thumbnail
             onclone: (clonedDoc) => {
               const el = clonedDoc.querySelector('[data-capture-container="true"]') as HTMLElement;
               if (el) {
-                // Remove all UI artifacts for a clean independent image
                 el.style.boxShadow = 'none';
                 el.style.borderRadius = '0';
                 el.style.border = 'none';
                 el.style.backgroundColor = 'transparent';
-                
-                // Hide design area borders/dashed lines if any
                 const designArea = el.querySelector('.border-dashed');
                 if (designArea) (designArea as HTMLElement).style.border = 'none';
               }
             }
           });
           
-          // Generate a high-quality, independent PNG data URL
-          const highResImageData = canvas.toDataURL('image/png', 1.0);
+          const highResImageData = canvas.toDataURL('image/jpeg', 0.5); 
           setLivePreviewUrl(highResImageData);
         } catch (err) {
           console.error("Live preview failed:", err);
         }
       }
-    }, 1500);
+    }, 300); 
     return () => clearTimeout(timer);
-  }, [elements, isDragging, activeViewId, currentTemplate?.id]);
+  }, [elements, activeViewId]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -523,13 +515,27 @@ export const ProductMockupModal: React.FC<ProductMockupModalProps> = ({
           
           await new Promise(resolve => setTimeout(resolve, 200)); // UI flush
 
-          const captureEl = canvasCaptureRef.current.querySelector('[data-capture-container="true"]') || canvasCaptureRef.current;
-          const canvas = await html2canvas(captureEl as HTMLElement, {
+          const captureEl = (canvasCaptureRef.current.querySelector('[data-capture-container="true"]') || canvasCaptureRef.current) as HTMLElement;
+          const img = captureEl.querySelector('img') as HTMLImageElement;
+          const naturalWidth = img?.naturalWidth || captureEl.offsetWidth;
+
+          const canvas = await html2canvas(captureEl, {
             useCORS: true,
             backgroundColor: null,
-            scale: 2, 
+            scale: naturalWidth / captureEl.offsetWidth, 
             logging: false,
             allowTaint: false,
+            onclone: (clonedDoc) => {
+              const el = clonedDoc.querySelector('[data-capture-container="true"]') as HTMLElement;
+              if (el) {
+                el.style.boxShadow = 'none';
+                el.style.borderRadius = '0';
+                el.style.border = 'none';
+                el.style.backgroundColor = 'transparent';
+                const designArea = el.querySelector('.border-dashed');
+                if (designArea) (designArea as HTMLElement).style.border = 'none';
+              }
+            }
           });
           
           const dataUrl = canvas.toDataURL('image/png', 0.8);
