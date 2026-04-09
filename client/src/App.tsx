@@ -13,12 +13,24 @@ import OrderDetail from './features/order/OrderDetail';
 import StoresList from './features/store/StoresList';
 import CategoriesList from './features/category/CategoriesList';
 import MainLayout from './components/layout/MainLayout';
+import SpecialtyTea from './features/home/pages/SpecialtyTea';
+import BrewingTeaware from './features/home/pages/BrewingTeaware';
+import CulturalApparel from './features/home/pages/CulturalApparel';
+import DesignSpace from './features/home/pages/DesignSpace';
+import HomeIntro from './features/home/pages/HomeIntro';
+import ContentHub from './features/dashboard/ContentHub';
 
 const ProtectedLayout = () => {
   return (
     <MainLayout>
       <Routes>
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/content-hub" element={<ContentHub />} />
+        <Route path="/home" element={<HomeIntro />} />
+        <Route path="/home/tea" element={<SpecialtyTea />} />
+        <Route path="/home/teaware" element={<BrewingTeaware />} />
+        <Route path="/home/apparel" element={<CulturalApparel />} />
+        <Route path="/home/design" element={<DesignSpace />} />
         <Route path="/my-templates" element={<MyTemplates />} />
         <Route path="/templates" element={<PublicTemplatesList />} />
         <Route path="/templates/new" element={<UpdateBaseTemplate />} />

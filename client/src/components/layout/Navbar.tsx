@@ -1,13 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { User, Settings, LogOut, ChevronDown, Bell, ShoppingCart, Globe } from 'lucide-react';
+import { User, Settings, LogOut, ChevronDown, Bell, ShoppingCart, Globe, Check, Info, AlertTriangle } from 'lucide-react';
+import { useCartStore } from '../../store/useCartStore';
 
 const Navbar = () => {
   const { i18n, t } = useTranslation();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isLangOpen, setIsLangOpen] = useState(false);
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const { items } = useCartStore();
+  
   const dropdownRef = useRef<HTMLDivElement>(null);
   const langRef = useRef<HTMLDivElement>(null);
+  const notifRef = useRef<HTMLDivElement>(null);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -17,6 +22,9 @@ const Navbar = () => {
       }
       if (langRef.current && !langRef.current.contains(event.target as Node)) {
         setIsLangOpen(false);
+      }
+      if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
+        setIsNotifOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -32,6 +40,17 @@ const Navbar = () => {
     i18n.changeLanguage(lng);
     setIsLangOpen(false);
   };
+
+  const handleOpenCart = () => {
+    const event = new CustomEvent('open-cart');
+    window.dispatchEvent(event);
+  };
+
+  const notifications = [
+    { id: 1, title: 'Order #1234 Successful', time: '2 mins ago', icon: Check, color: 'bg-emerald-50 text-emerald-600', desc: 'Your print order has been processed.' },
+    { id: 2, title: 'New Template Available', time: '1 hour ago', icon: Info, color: 'bg-blue-50 text-blue-600', desc: 'The "Summer Vibes" collection is out.' },
+    { id: 3, title: 'Account Security', time: '5 hours ago', icon: AlertTriangle, color: 'bg-amber-50 text-amber-600', desc: 'Please verify your backup email.' }
+  ];
 
   return (
     <nav className="fixed top-0 z-50 bg-white border-b border-gray-200 w-full">
@@ -82,21 +101,60 @@ const Navbar = () => {
               </div>
 
               {/* Notification Button */}
-              {/* ...existing code... */}
-              <button type="button" className="p-2 text-gray-500 rounded-lg hover:text-indigo-600 hover:bg-indigo-50 transition-colors relative">
-                <Bell className="w-6 h-6" />
-                <span className="absolute top-1.5 right-1.5 flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                </span>
-              </button>
+              <div className="relative" ref={notifRef}>
+                <button 
+                  type="button" 
+                  onClick={() => setIsNotifOpen(!isNotifOpen)}
+                  className={`p-2 rounded-lg transition-all relative ${isNotifOpen ? 'text-indigo-600 bg-indigo-50' : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50'}`}
+                >
+                  <Bell className="w-6 h-6" />
+                  <span className="absolute top-1.5 right-1.5 flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                  </span>
+                </button>
+
+                {isNotifOpen && (
+                  <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 py-4 z-50 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div className="px-5 mb-4 flex items-center justify-between">
+                      <h3 className="text-sm font-black text-gray-900 uppercase tracking-widest leading-none">Notifications</h3>
+                      <button className="text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:underline">Clear All</button>
+                    </div>
+                    <div className="max-h-[400px] overflow-y-auto px-2 space-y-1">
+                      {notifications.map((n) => (
+                        <button key={n.id} className="w-full flex items-start gap-4 p-3 rounded-xl hover:bg-gray-50 transition-all text-left group">
+                          <div className={`p-2 rounded-xl flex-shrink-0 ${n.color}`}>
+                            <n.icon size={18} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex justify-between items-center mb-0.5">
+                              <p className="text-sm font-bold text-gray-900 group-hover:text-indigo-600 transition-colors truncate">{n.title}</p>
+                              <span className="text-[9px] font-bold text-gray-400 uppercase flex-shrink-0">{n.time}</span>
+                            </div>
+                            <p className="text-xs text-gray-500 line-clamp-1">{n.desc}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                    <div className="mt-4 px-5 pt-3 border-t border-gray-50">
+                      <button className="w-full py-2 bg-gray-50 rounded-xl text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] hover:bg-indigo-50 hover:text-indigo-600 transition-all">View All Activity</button>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* Shopping Cart Button */}
-              <button type="button" className="p-2 text-gray-500 rounded-lg hover:text-indigo-600 hover:bg-indigo-50 transition-colors relative">
+              <button 
+                type="button" 
+                onClick={handleOpenCart}
+                className="p-2 text-gray-500 rounded-lg hover:text-indigo-600 hover:bg-indigo-50 transition-colors relative"
+              >
                 <ShoppingCart className="w-6 h-6" />
-                <span className="absolute -top-0.5 -right-0.5 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-bold leading-none text-white bg-indigo-600 rounded-full">
-                  3
-                </span>
+                {items.length > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-black leading-none text-white bg-indigo-600 rounded-full animate-in zoom-in">
+                    {items.length}
+                  </span>
+                )}
               </button>
 
               <div className="h-6 w-px bg-gray-200 mx-1 md:mx-2"></div>

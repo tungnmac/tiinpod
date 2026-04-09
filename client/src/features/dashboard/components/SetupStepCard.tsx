@@ -41,7 +41,7 @@ const SetupStepCard: React.FC<SetupStepCardProps> = ({
           <div className={`p-3 rounded-xl ${status === 'in-progress' ? 'bg-indigo-600 text-white' : (status === 'completed' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-600')}`}>
             <Icon size={24} />
           </div>
-          <span className="text-sm font-bold text-gray-400">Bước {step}</span>
+          <span className="text-sm font-bold text-gray-400">{t('step')} {step}</span>
         </div>
         
         <h3 className="text-xl font-bold text-gray-900 mb-2 leading-tight">{title}</h3>

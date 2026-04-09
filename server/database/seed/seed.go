@@ -16,6 +16,7 @@ func SeedAll() {
 	SeedCategoriesAndProducts()
 	SeedProductTemplates()
 	SeedOrders()
+	SeedScenes()
 
 	log.Println("Hoàn tất tất cả seed dữ liệu.")
 }

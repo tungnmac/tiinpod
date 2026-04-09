@@ -65,6 +65,7 @@ const DesignSceneModal: React.FC<DesignSceneModalProps> = ({
   const filteredScenes = useMemo(() => {
     return sceneTemplates.filter(scene => {
       const matchCategory = selectedCategory === 'All Scenes' || (scene.category || '').toLowerCase() === selectedCategory.toLowerCase().replace(' ', '-');
+      console.log(matchCategory)
       const matchSearch = (scene.name || '').toLowerCase().includes(searchQuery.toLowerCase());
       return matchCategory && matchSearch;
     });

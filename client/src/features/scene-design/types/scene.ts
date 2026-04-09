@@ -1,24 +1,33 @@
 import { DesignElement } from '../../../types/product';
 
-export interface SceneObject extends DesignElement {
+// Base GORM fields to match Golang Backend (snake_case)
+export interface BaseEntity {
+  id: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SceneObject extends Omit<DesignElement, 'type'> {
   type: 'image' | 'text' | 'decor' | 'furniture';
   zIndex: number;
   flipX?: boolean;
 }
 
-export interface SceneTemplate {
-  id: string;
-  name: string;
-  category: 'office' | 'cafe' | 'tea-room' | 'studio';
-  thumbnail_url: string;
-  background_url: string;
-  default_objects?: Partial<SceneObject>[];
-}
-
-export interface InteriorAsset {
-  id: string;
+export interface SceneTemplate extends BaseEntity {
   name: string;
   category: string;
-  image_url: string;
-  default_width: number;
+  thumbnail_url: string;
+  background_url: string;
+  description?: string;
+}
+
+export interface InteriorAsset extends BaseEntity {
+  name: string;
+  url: string;
+  category: string;
+}
+
+export interface SceneApiResponse<T> {
+  message: string;
+  data: T;
 }

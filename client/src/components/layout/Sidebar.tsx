@@ -24,7 +24,11 @@ import {
   ClipboardList,
   CreditCard,
   ListOrdered,
-  Home
+  Home,
+  Leaf,
+  Coffee,
+  Shirt,
+  Sparkles
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -40,6 +44,17 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
 
   const menuItems = [
     { name: t('home'), path: '/dashboard', icon: Home },
+    { 
+      name: 'Content Hub', 
+      path: '/content-hub', 
+      icon: Layers,
+      menus: [
+        { name: 'Specialty Tea', path: '/home/tea', icon: Leaf },
+        { name: 'Brewing Teaware', path: '/home/teaware', icon: Coffee },
+        { name: 'Cultural Apparel', path: '/home/apparel', icon: Shirt },
+        { name: 'Design Space', path: '/home/design', icon: Sparkles },
+      ]
+    },
     { name: t('my_templates'), path: '/my-templates', icon: LayoutDashboard },
     { name: t('base_templates'), path: '/templates', icon: Box },
     { name: t('orders'), path: '/orders', icon: ListOrdered },
@@ -141,6 +156,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed }) => {
               ) : (
                 <NavLink
                   to={item.path}
+                  target={item.path.startsWith('/home') ? '_blank' : undefined}
                   onClick={() => setShowMore(false)}
                   className={({ isActive }) =>
                     `flex items-center p-2 text-sm rounded-lg transition-colors ${

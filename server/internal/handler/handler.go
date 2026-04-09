@@ -15,6 +15,7 @@ type Handlers struct {
 	Payment         *PaymentHandler
 	File            *FileHandler
 	UserTemplate    *UserTemplateHandler
+	Scene           *SceneHandler
 }
 
 func NewHandlers(services *service.Services) *Handlers {
@@ -31,5 +32,6 @@ func NewHandlers(services *service.Services) *Handlers {
 		Payment:         NewPaymentHandler(services.Payment),
 		File:            NewFileHandler(services.File),
 		UserTemplate:    NewUserTemplateHandler(services.UserTemplate),
+		Scene:           NewSceneHandler(),
 	}
 }

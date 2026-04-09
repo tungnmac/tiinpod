@@ -22,6 +22,8 @@ import {
   CloudUpload,
   Sparkles
 } from 'lucide-react';
+import api from '../../../../services/api';
+import { sceneService } from '../../../../services/sceneService';
 
 import { SceneObject, SceneTemplate } from '../../types/scene';
 import { SceneCanvas } from './SceneCanvas';
@@ -45,6 +47,11 @@ export const SceneDesignModal: React.FC<SceneDesignModalProps> = ({
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isRightSidebarCollapsed, setIsRightSidebarCollapsed] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [history, setHistory] = useState<SceneObject[][]>([]);
+  const [historyStep, setHistoryStep] = useState(-1);
+  const [activeTab, setActiveTab] = useState('elements');
+  const [assets, setAssets] = useState<any[]>([]);
+  const [loadingAssets, setLoadingAssets] = useState(true);
   const canvasCaptureRef = useRef<HTMLDivElement>(null);
 
   const currentTemplate = initialTemplate || {
@@ -55,47 +62,129 @@ export const SceneDesignModal: React.FC<SceneDesignModalProps> = ({
       background_url: 'https://images.unsplash.com/photo-1544027993-37dbfe43562a?q=1200'
   };
 
+  // History management
+  const saveToHistory = (newObjects: SceneObject[]) => {
+    const newHistory = history.slice(0, historyStep + 1);
+    newHistory.push([...newObjects]);
+    if (newHistory.length > 50) newHistory.shift();
+    setHistory(newHistory);
+    setHistoryStep(newHistory.length - 1);
+  };
+
+  const undo = () => {
+    if (historyStep > 0) {
+      const prevStep = historyStep - 1;
+      setObjects([...history[prevStep]]);
+      setHistoryStep(prevStep);
+    }
+  };
+
+  const redo = () => {
+    if (historyStep < history.length - 1) {
+      const nextStep = historyStep + 1;
+      setObjects([...history[nextStep]]);
+      setHistoryStep(nextStep);
+    }
+  };
+
+  useEffect(() => {
+    // Initial history
+    if (objects.length === 0 && history.length === 0) {
+      saveToHistory([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    // Fetch assets from API
+    const fetchAssets = async () => {
+      try {
+        setLoadingAssets(true);
+        const data = await sceneService.getAssets();
+        if (data) {
+          setAssets(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch assets", err);
+      } finally {
+        setLoadingAssets(false);
+      }
+    };
+
+    fetchAssets();
+  }, []);
+
   const selectedObject = objects.find(o => o.id === selectedId);
 
   useEffect(() => {
     // Reset objects when template changes
     setObjects([]);
     setSelectedId(null);
+    setHistory([]);
+    setHistoryStep(-1);
+    saveToHistory([]);
   }, [currentTemplate?.id]);
 
   // Dragging state
   const isDragging = useRef(false);
   const dragStart = useRef({ x: 0, y: 0 });
 
-  const addObject = (url: string, type: 'furniture' | 'decor' = 'furniture') => {
+  const addObject = (url: string, type: 'furniture' | 'decor' | 'text' | 'image' = 'furniture', text?: string) => {
     const newObj: SceneObject = {
       id: `obj_${Date.now()}`,
       type,
-      url,
-      x: 0,
-      y: 0,
+      url: url || '',
+      text: text || (type === 'text' ? 'Double click to edit' : ''),
+      x: 50,
+      y: 50,
       scale: 1,
       rotate: 0,
       opacity: 100,
       zIndex: objects.length + 1,
       isVisible: true,
-      width: 250
+      flipX: false,
+      width: type === 'text' ? undefined : 250,
+      fontSize: type === 'text' ? 32 : undefined,
+      fontWeight: type === 'text' ? 'bold' : undefined,
+      color: type === 'text' ? '#000000' : undefined
     };
-    setObjects(prev => [...prev, newObj]);
+    const newObjects = [...objects, newObj];
+    setObjects(newObjects);
+    saveToHistory(newObjects);
     setSelectedId(newObj.id);
   };
 
-  const updateObject = (id: string, updates: Partial<SceneObject>) => {
-    setObjects(prev => prev.map(o => o.id === id ? { ...o, ...updates } : o));
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const url = event.target?.result as string;
+        addObject(url, 'image');
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const updateObject = (id: string, updates: Partial<SceneObject>, skipHistory = false) => {
+    setObjects(prev => {
+      const newObjects = prev.map(o => o.id === id ? { ...o, ...updates } : o);
+      if (!skipHistory) saveToHistory(newObjects);
+      return newObjects;
+    });
   };
 
   const deleteObject = (id: string) => {
-    setObjects(prev => prev.filter(o => o.id !== id));
+    setObjects(prev => {
+      const newObjects = prev.filter(o => o.id !== id);
+      saveToHistory(newObjects);
+      return newObjects;
+    });
     if (selectedId === id) setSelectedId(null);
   };
 
   const handleSelect = (id: string, e: React.MouseEvent) => {
     setSelectedId(id);
+    setIsRightSidebarCollapsed(false); // Auto open properties
     const obj = objects.find(o => o.id === id);
     if (!obj) return;
     isDragging.current = true;
@@ -105,13 +194,29 @@ export const SceneDesignModal: React.FC<SceneDesignModalProps> = ({
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDragging.current || !selectedId) return;
-      updateObject(selectedId, {
-        x: e.clientX - dragStart.current.x,
-        y: e.clientY - dragStart.current.y
+      
+      setObjects(prev => {
+        const obj = prev.find(o => o.id === selectedId);
+        if (!obj) return prev;
+        
+        const newObjects = prev.map(o => o.id === selectedId ? {
+          ...o,
+          x: e.clientX - dragStart.current.x,
+          y: e.clientY - dragStart.current.y
+        } : o);
+        
+        return newObjects;
       });
     };
 
     const handleMouseUp = () => {
+        if (isDragging.current) {
+          // At the end of drag, we save the FINAL state to history once
+          setObjects(current => {
+            saveToHistory(current);
+            return current;
+          });
+        }
         isDragging.current = false;
     };
 
@@ -147,32 +252,7 @@ export const SceneDesignModal: React.FC<SceneDesignModalProps> = ({
     }
   };
 
-  const ASSETS = [
-    { 
-      id: 'f1', 
-      name: 'Eames Lounge', 
-      url: 'https://p7.hiclipart.com/preview/44/127/535/eames-lounge-chair-charles-and-ray-eames-furniture-herman-miller-eames-lounge-chair.jpg', 
-      category: 'furniture'
-    },
-    { 
-      id: 'f2', 
-      name: 'Nordic Sofa', 
-      url: 'https://p7.hiclipart.com/preview/417/30/1004/couch-sofa-bed-living-room-furniture-nordic-sofa.jpg', 
-      category: 'furniture'
-    },
-    { 
-      id: 'd1', 
-      name: 'Monstera', 
-      url: 'https://p7.hiclipart.com/preview/659/54/983/monstera-deliciosa-houseplant-flowerpot-leaf-plant.jpg', 
-      category: 'decor'
-    },
-    { 
-      id: 'd2', 
-      name: 'Tea Set', 
-      url: 'https://p7.hiclipart.com/preview/834/621/530/tea-japanese-cuisine-matcha-ocha-japanese-tea-set.jpg', 
-      category: 'decor'
-    }
-  ];
+  console.log(assets)
 
   if (!isOpen) return null;
 
@@ -199,10 +279,29 @@ export const SceneDesignModal: React.FC<SceneDesignModalProps> = ({
 
         <div className="flex items-center gap-3">
           <div className="flex items-center bg-white/5 rounded-xl p-1 mr-2">
-            <button className="p-2 text-white/50 hover:text-white transition-colors"><Undo2 size={18} /></button>
-            <button className="p-2 text-white/50 hover:text-white transition-colors"><Redo2 size={18} /></button>
+            <button 
+              onClick={undo}
+              disabled={historyStep <= 0}
+              className={`p-2 transition-colors ${historyStep <= 0 ? 'text-white/20 cursor-not-allowed' : 'text-white/50 hover:text-white'}`}
+            >
+              <Undo2 size={18} />
+            </button>
+            <button 
+              onClick={redo}
+              disabled={historyStep >= history.length - 1}
+              className={`p-2 transition-colors ${historyStep >= history.length - 1 ? 'text-white/20 cursor-not-allowed' : 'text-white/50 hover:text-white'}`}
+            >
+              <Redo2 size={18} />
+            </button>
           </div>
-          <button className="hidden md:flex items-center gap-2 px-4 py-2 text-white/90 hover:bg-white/10 rounded-xl font-bold text-sm transition-all border border-white/10">
+          <button 
+            onClick={() => {
+              setObjects([]);
+              saveToHistory([]);
+              setSelectedId(null);
+            }}
+            className="hidden md:flex items-center gap-2 px-4 py-2 text-white/90 hover:bg-white/10 rounded-xl font-bold text-sm transition-all border border-white/10"
+          >
             <RefreshCcw size={16} /> Reset
           </button>
           <button 
@@ -210,7 +309,7 @@ export const SceneDesignModal: React.FC<SceneDesignModalProps> = ({
             disabled={isSaving}
             className="bg-[#8b3dff] hover:bg-[#7a26ff] text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-xl shadow-purple-900/20 flex items-center gap-2 transition-all active:scale-95"
           >
-            {isSaving ? <RefreshCcw className="animate-spin" size={18} /> : <><Save size={18} /> Share & Render</>}
+            {isSaving ? <RefreshCcw className="animate-spin" size={18} /> : <><Sparkles size={18} /> Finish Design</>}
           </button>
           <button onClick={onClose} className="p-2 text-white/70 hover:text-white rounded-lg transition-all">
             <X size={20} />
@@ -231,66 +330,155 @@ export const SceneDesignModal: React.FC<SceneDesignModalProps> = ({
           ].map((item) => (
             <button
               key={item.id}
-              className={`w-full flex flex-col items-center justify-center py-4 gap-1.5 transition-all hover:bg-white/5 ${item.id === 'elements' ? 'text-white' : 'text-white/40'}`}
+              onClick={() => {
+                setActiveTab(item.id);
+                setIsSidebarCollapsed(false);
+              }}
+              className={`w-full flex flex-col items-center justify-center py-4 gap-1.5 transition-all hover:bg-white/5 ${activeTab === item.id ? 'text-white border-l-2 border-[#8b3dff] bg-white/5' : 'text-white/40'}`}
             >
-              <item.icon size={24} strokeWidth={item.id === 'elements' ? 2 : 1.5} />
+              <item.icon size={24} strokeWidth={activeTab === item.id ? 2 : 1.5} />
               <span className="text-[9px] font-bold uppercase tracking-tight">{item.label}</span>
             </button>
           ))}
           <div className="mt-auto pt-4 border-t border-white/5 w-full flex justify-center">
-            <button className="text-white/40 hover:text-white p-4">
-              <PanelLeftClose size={20} />
+            <button 
+              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+              className="text-white/40 hover:text-white p-4"
+            >
+              {isSidebarCollapsed ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />}
             </button>
           </div>
         </aside>
 
         {/* ASSET PANEL (Nested inside sidebar area) */}
-        <div className="w-[320px] bg-[#252627] flex flex-col shrink-0 border-r border-white/10 animate-in slide-in-from-left duration-300">
-          <div className="p-5">
-            <div className="relative mb-6">
-              <input 
-                type="text" 
-                placeholder="Search templates or furniture..." 
-                className="w-full bg-[#1e1f20] border-none text-white text-sm px-4 py-3 rounded-xl focus:ring-2 focus:ring-purple-500 placeholder:text-white/20 font-medium" 
-              />
-            </div>
-            
-            <div className="space-y-6">
-              <section>
-                <h4 className="text-xs font-black text-white/40 uppercase tracking-widest mb-4">Graphics & Furniture</h4>
-                <div className="grid grid-cols-2 gap-3">
-                  {ASSETS.map(asset => (
-                    <button 
-                      key={asset.id} 
-                      onClick={() => addObject(asset.url, asset.category as any)}
-                      className="aspect-square bg-[#1e1f20] rounded-xl overflow-hidden hover:ring-2 hover:ring-purple-500 transition-all group relative"
-                    >
-                      <img src={asset.url} alt={asset.name} className="w-full h-full object-contain p-2 transition-transform group-hover:scale-110" />
-                      <div className="absolute inset-x-0 bottom-0 bg-black/60 p-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <p className="text-[10px] font-bold text-white truncate text-center uppercase tracking-tighter">{asset.name}</p>
+        {!isSidebarCollapsed && (
+          <div className="w-[320px] bg-[#252627] flex flex-col shrink-0 border-r border-white/10 animate-in slide-in-from-left duration-300">
+            <div className="p-5">
+              <div className="relative mb-6">
+                <input 
+                  type="text" 
+                  placeholder={`Search ${activeTab}...`}
+                  className="w-full bg-[#1e1f20] border-none text-white text-sm px-4 py-3 rounded-xl focus:ring-2 focus:ring-purple-500 placeholder:text-white/20 font-medium" 
+                />
+              </div>
+              
+              <div className="space-y-6">
+                {activeTab === 'elements' && (
+                  <section>
+                    <h4 className="text-xs font-black text-white/40 uppercase tracking-widest mb-4">Graphics & Furniture</h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      {loadingAssets ? (
+                        <div className="col-span-2 flex justify-center py-8">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
+                        </div>
+                      ) : assets.length > 0 ? (
+                        assets.map(asset => (
+                          <button 
+                            key={asset.id} 
+                            onClick={() => addObject(asset.url, asset.category as any)}
+                            className="aspect-square bg-[#1e1f20] rounded-xl overflow-hidden hover:ring-2 hover:ring-purple-500 transition-all group relative"
+                          >
+                            <img src={asset.url} alt={asset.name} className="w-full h-full object-contain p-2 transition-transform group-hover:scale-110" />
+                            <div className="absolute inset-x-0 bottom-0 bg-black/60 p-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <p className="text-[10px] font-bold text-white truncate text-center uppercase tracking-tighter">{asset.name}</p>
+                            </div>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="col-span-2 text-center py-8 text-white/40 text-xs">
+                          No assets found. Run seed script first.
+                        </div>
+                      )}
+                      <div className="aspect-square bg-[#1e1f20] border-2 border-dashed border-white/10 rounded-xl flex flex-col items-center justify-center hover:bg-white/5 transition-all cursor-pointer">
+                        <CloudUpload className="text-white/20 mb-1" size={24} />
+                        <span className="text-xs font-bold text-white/20">Upload</span>
                       </div>
-                    </button>
-                  ))}
-                  <div className="aspect-square bg-[#1e1f20] border-2 border-dashed border-white/10 rounded-xl flex flex-col items-center justify-center hover:bg-white/5 transition-all cursor-pointer">
-                    <CloudUpload className="text-white/20 mb-1" size={24} />
-                    <span className="text-xs font-bold text-white/20">Upload</span>
-                  </div>
-                </div>
-              </section>
+                    </div>
+                  </section>
+                )}
 
-              <div className="bg-gradient-to-br from-purple-600/20 to-indigo-600/20 rounded-2xl p-5 border border-purple-500/20">
-                <h4 className="text-white font-bold text-xs mb-2 flex items-center gap-2">
-                  <Sparkles size={14} className="text-purple-400" />
-                  AI Magic Editor
-                </h4>
-                <p className="text-[10px] text-white/60 mb-4 leading-relaxed font-medium">Re-style this room using AI-powered furniture replacement.</p>
-                <button className="w-full bg-white text-black py-2.5 rounded-xl text-xs font-black shadow-lg shadow-black/20 hover:scale-[1.02] transition-all uppercase tracking-widest">
-                  Generate Scene
-                </button>
+                {activeTab === 'templates' && (
+                  <div className="text-center py-12">
+                    <Layout className="text-white/10 mx-auto mb-3" size={48} />
+                    <p className="text-xs font-bold text-white/40">Room templates coming soon</p>
+                  </div>
+                )}
+
+                {activeTab === 'text' && (
+                  <div className="space-y-4">
+                    <h4 className="text-xs font-black text-white/40 uppercase tracking-widest mb-4">Add Typography</h4>
+                    <button 
+                      onClick={() => addObject('', 'text', 'Add a heading')}
+                      className="w-full py-6 bg-white/5 hover:bg-white/10 text-white rounded-xl font-black text-2xl transition-all border border-white/5"
+                    >
+                      Add Heading
+                    </button>
+                    <button 
+                      onClick={() => addObject('', 'text', 'Add a subheading')}
+                      className="w-full py-4 bg-white/5 hover:bg-white/10 text-white rounded-xl font-bold text-lg transition-all border border-white/5"
+                    >
+                      Add Subheading
+                    </button>
+                    <button 
+                      onClick={() => addObject('', 'text', 'Add a body text')}
+                      className="w-full py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl font-medium text-sm transition-all border border-white/5"
+                    >
+                      Add body text
+                    </button>
+                  </div>
+                )}
+
+                {activeTab === 'uploads' && (
+                  <div className="space-y-4">
+                    <label className="w-full aspect-square bg-purple-600/10 hover:bg-purple-600/20 border-2 border-dashed border-purple-500/30 rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-all group">
+                      <CloudUpload className="text-purple-400 mb-2 group-hover:scale-110 transition-transform" size={48} />
+                      <span className="text-sm font-bold text-white">Upload Image</span>
+                      <p className="text-[10px] text-white/40 mt-1 uppercase tracking-widest font-black">PNG, JPG up to 10MB</p>
+                      <input 
+                        type="file" 
+                        className="hidden" 
+                        accept="image/*"
+                        onChange={handleFileUpload}
+                      />
+                    </label>
+
+                    <div className="pt-4">
+                       <h4 className="text-xs font-black text-white/40 uppercase tracking-widest mb-4">Your Uploads</h4>
+                       <div className="grid grid-cols-2 gap-3">
+                        {objects
+                          .filter(o => o.type === 'image' && o.url && o.url.startsWith('data:'))
+                          .reduce((acc, obj) => {
+                            if (!acc.find(a => a.url === obj.url)) acc.push(obj);
+                            return acc;
+                          }, [] as typeof objects)
+                          .map(obj => (
+                           <button 
+                             key={obj.id}
+                             onClick={() => addObject(obj.url || '', 'image')}
+                             className="aspect-square bg-[#1e1f20] rounded-xl overflow-hidden hover:ring-2 hover:ring-purple-500 transition-all group"
+                           >
+                             <img src={obj.url} className="w-full h-full object-cover group-hover:scale-110 transition-transform" alt="Upload" />
+                           </button>
+                         ))}
+                       </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="bg-gradient-to-br from-purple-600/20 to-indigo-600/20 rounded-2xl p-5 border border-purple-500/20">
+                  <h4 className="text-white font-bold text-xs mb-2 flex items-center gap-2">
+                    <Sparkles size={14} className="text-purple-400" />
+                    AI Magic Editor
+                  </h4>
+                  <p className="text-[10px] text-white/60 mb-4 leading-relaxed font-medium">Re-style this room using AI-powered furniture replacement.</p>
+                  <button className="w-full bg-white text-black py-2.5 rounded-xl text-xs font-black shadow-lg shadow-black/20 hover:scale-[1.02] transition-all uppercase tracking-widest">
+                    Generate Scene
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* CANVA-STYLE DARK CANVAS AREA */}
         <main className="flex-1 bg-[#1a1a1c] relative flex flex-col overflow-hidden">

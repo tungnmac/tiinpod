@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import html2canvas from 'html2canvas';
+import toast from 'react-hot-toast';
 import { 
   X, 
   Type, 
@@ -23,10 +24,12 @@ import {
   PanelRightOpen,
   ChevronDown,
   ChevronUp,
-  Check
+  Check,
+  Palette
 } from 'lucide-react';
 import api from '../../../services/api';
 import { savedTemplateService } from '../../../services/savedTemplateService';
+import { useCartStore } from '../../../store/useCartStore';
 
 // Module-level imports
 import { DesignElement, ProductTemplate } from '../../../types/product';
@@ -586,11 +589,30 @@ export const ProductMockupModal: React.FC<ProductMockupModalProps> = ({
         preview_image_url: primaryPreviewUrl, // This is now a Cloudinary URL
         design_data: designData
       });
-      alert(initialDesign?.id ? "Template updated successfully!" : "Template saved successfully!");
+
+      // Add to Cart
+      useCartStore.getState().addItem({
+        id: `design_${initialDesign?.id || Date.now()}`,
+        templateId: currentTemplate.id,
+        name: currentTemplate.name,
+        price: currentTemplate.price,
+        image: primaryPreviewUrl,
+        quantity: 1,
+        designData: JSON.parse(designData)
+      });
+
+      toast.success(initialDesign?.id ? "Template updated and added to cart!" : "Template saved and added to cart!");
+      
+      // Auto-open the cart drawer after adding
+      if (typeof window !== 'undefined') {
+        const event = new CustomEvent('open-cart');
+        window.dispatchEvent(event);
+      }
+      
       onClose();
     } catch (error: any) {
       console.error("Save error:", error);
-      alert(error.message || "Failed to save template.");
+      toast.error(error.message || "Failed to save template.");
     } finally {
       setIsSaving(false);
     }
@@ -648,31 +670,32 @@ export const ProductMockupModal: React.FC<ProductMockupModalProps> = ({
           </div>
 
           <div className="flex items-center gap-1.5 md:gap-3 ml-2">
-            <div className="hidden sm:flex items-center bg-gray-50 p-1 rounded-xl border border-gray-100">
+            {!isSaving && !isEditing && (
               <button 
-                onClick={undo} 
-                disabled={historyIndex <= 0} 
-                className={`p-1.5 md:p-2 rounded-lg transition-all ${historyIndex > 0 ? 'text-indigo-600 hover:bg-white hover:shadow-sm' : 'text-gray-300 cursor-not-allowed'}`}
-                title="Undo (Ctrl+Z)"
+                onClick={handleSave} 
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 md:px-6 md:py-2.5 rounded-xl font-bold text-xs md:text-sm shadow-xl shadow-indigo-900/20 flex items-center gap-1.5 md:gap-2 transition-all active:scale-95"
               >
-                <Undo2 size={16} />
+                <Palette size={18} /> <span className="hidden xs:inline">Add to Cart</span>
               </button>
+            )}
+            {isSaving && (
+              <button disabled className="bg-indigo-400 text-white px-4 py-2 md:px-6 md:py-2.5 rounded-xl font-bold text-xs md:text-sm flex items-center gap-1.5 md:gap-2 cursor-wait">
+                <RefreshCcw size={16} className="animate-spin" /> <span className="hidden xs:inline">Processing...</span>
+              </button>
+            )}
+            {isEditing && !isSaving && (
               <button 
-                onClick={redo} 
-                disabled={historyIndex >= history.length - 1} 
-                className={`p-1.5 md:p-2 rounded-lg transition-all ${historyIndex < history.length - 1 ? 'text-indigo-600 hover:bg-white hover:shadow-sm' : 'text-gray-300 cursor-not-allowed'}`}
-                title="Redo (Ctrl+Y)"
+                onClick={handleSave} 
+                className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 md:px-6 md:py-2.5 rounded-xl font-bold text-xs md:text-sm shadow-xl shadow-amber-900/20 flex items-center gap-1.5 md:gap-2 transition-all active:scale-95"
               >
-                <Redo2 size={16} />
+                <Save size={18} /> <span className="hidden xs:inline">Update Cart</span>
               </button>
-            </div>
-            <div className="hidden sm:block h-6 w-[1.5px] bg-gray-100 mx-0.5 md:mx-1"></div>
+            )}
             <button 
-              onClick={onClose} 
-              className="p-2 md:p-2.5 bg-gray-50 hover:bg-red-50 hover:text-red-500 rounded-xl text-gray-400 transition-all border border-gray-100"
-              title="Close editor"
+              onClick={onClose}
+              className="p-1.5 md:p-2.5 bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-700 rounded-xl transition-all"
             >
-              <X size={18} />
+              <X size={20} />
             </button>
           </div>
         </div>
@@ -683,8 +706,7 @@ export const ProductMockupModal: React.FC<ProductMockupModalProps> = ({
             {[
               { id: 'design', icon: Layout, label: 'Assets' },
               { id: 'text', icon: Type, label: 'Text' },
-              { id: 'layers', icon: Layers, label: 'Layers' },
-              { id: 'settings', icon: Settings2, label: 'Settings' }
+              { id: 'layers', icon: Layers, label: 'Settings' }
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -904,8 +926,7 @@ export const ProductMockupModal: React.FC<ProductMockupModalProps> = ({
                 {[
                   { id: 'design', icon: Layout, label: 'Assets' },
                   { id: 'text', icon: Type, label: 'Text' },
-                  { id: 'layers', icon: Layers, label: 'Layers' },
-                  { id: 'settings', icon: Settings2, label: 'Settings' }
+                  { id: 'layers', icon: Layers, label: 'Settings' }
                 ].map((tab) => (
                   <button
                     key={tab.id}

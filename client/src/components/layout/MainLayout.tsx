@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Navbar from './Navbar';
 import Sidebar from './Sidebar';
 import Footer from './Footer';
+import { useLocation } from 'react-router-dom';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -9,6 +10,8 @@ interface MainLayoutProps {
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const location = useLocation();
+  const isHomeRoute = location.pathname.startsWith('/home');
 
   useEffect(() => {
     const handleResize = () => {
@@ -31,9 +34,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   return (
     <div className="antialiased bg-gray-50 min-h-screen flex flex-col">
       <Navbar />
-      <Sidebar isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
-      <main className={`transition-all duration-300 ${isCollapsed ? 'ml-20' : 'ml-64'} bg-[#f8f8f8] pt-20`}>
-        <div className="p-4 border-2 border-gray-100 border-dashed rounded-lg  bg-[#f8f8f8] min-h-[calc(100vh-200px)] shadow-sm">
+      {!isHomeRoute && <Sidebar isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />}
+      <main className={`transition-all duration-300 ${isHomeRoute ? 'ml-0' : isCollapsed ? 'ml-20' : 'ml-64'} bg-[#f8f8f8] pt-20 px-0`}>
+        <div className={`p-4 border-2 border-gray-100 border-dashed rounded-lg bg-[#f8f8f8] min-h-[calc(100vh-200px)] shadow-sm ${isHomeRoute ? 'border-none p-0' : ''}`}>
           {children}
         </div>
         <Footer/>

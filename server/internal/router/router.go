@@ -99,5 +99,12 @@ func (r *Router) RegisterRoutes(engine *gin.Engine) {
 				orders.GET("", r.Handlers.Order.GetAll)
 			}
 		}
+
+		// Scene Design Endpoints (Public)
+		scenes := api.Group("/scenes")
+		{
+			scenes.GET("/templates", r.Handlers.Scene.GetTemplates)
+			scenes.GET("/assets", r.Handlers.Scene.GetAssets)
+		}
 	}
 }

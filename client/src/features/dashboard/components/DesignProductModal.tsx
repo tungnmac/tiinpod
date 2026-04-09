@@ -1,6 +1,8 @@
-import React, { useState, useMemo } from 'react';
-import { X, Star, Plus, LayoutGrid, Shirt, Laptop, Coffee, Glasses, Search, ChevronRight, Layout, Sparkles } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { X, Star, Plus, LayoutGrid, Shirt, Laptop, Coffee, Glasses, Search, ChevronRight, Layout, Sparkles, House } from 'lucide-react';
 import { ProductTemplate } from '../../../types/product';
+import api from '../../../services/api';
+import { sceneService } from '../../../services/sceneService';
 
 interface DesignProductModalProps {
   isOpen: boolean;
@@ -11,7 +13,7 @@ interface DesignProductModalProps {
   onSelectScene: (template: any) => void;
 }
 
-const DesignProductModal: React.FC<DesignProductModalProps> = ({
+export const DesignProductModal: React.FC<DesignProductModalProps> = ({
   isOpen,
   onClose,
   isLoading,
@@ -22,11 +24,12 @@ const DesignProductModal: React.FC<DesignProductModalProps> = ({
   const [activeTab, setActiveTab] = useState<'products' | 'scenes'>('products');
   const [selectedCategory, setSelectedCategory] = useState<string>('All Products');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [dbScenes, setDbScenes] = useState<any[]>([]);
+  const [loadingScenes, setLoadingScenes] = useState(false);
 
   const productCategories = [
     { name: 'All Products', icon: LayoutGrid },
     { name: 'Apparel', icon: Shirt },
-    { name: 'Home Decor', icon: Coffee },
     { name: 'Accessories', icon: Glasses },
     { name: 'Technology', icon: Laptop },
   ];
@@ -36,9 +39,30 @@ const DesignProductModal: React.FC<DesignProductModalProps> = ({
     { name: 'Tea Room', icon: Coffee },
     { name: 'Cafe', icon: Layout },
     { name: 'Office', icon: Laptop },
+    { name: 'Home Decor', icon: House },
   ];
 
   const categories = activeTab === 'products' ? productCategories : sceneCategories;
+
+  useEffect(() => {
+    if (activeTab === 'scenes' && dbScenes.length === 0) {
+      fetchScenes();
+    }
+  }, [activeTab]);
+
+  const fetchScenes = async () => {
+    try {
+      setLoadingScenes(true);
+      const data = await sceneService.getTemplates();
+      if (data) {
+        setDbScenes(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch scenes", err);
+    } finally {
+      setLoadingScenes(false);
+    }
+  };
 
   const filteredTemplates = useMemo(() => {
     if (activeTab === 'scenes') return [];
@@ -52,44 +76,15 @@ const DesignProductModal: React.FC<DesignProductModalProps> = ({
     });
   }, [templates, selectedCategory, searchQuery, activeTab]);
 
-  const sceneTemplates = [
-    {
-      id: 'scene-1',
-      name: 'Modern Tea Room',
-      category: 'tea-room',
-      image_url: 'https://images.unsplash.com/photo-1544027993-37dbfe43562a?q=80&w=600&auto=format&fit=crop',
-      thumbnail_url: 'https://images.unsplash.com/photo-1544027993-37dbfe43562a?q=80&w=200&h=150&auto=format&fit=crop',
-      background_url: 'https://images.unsplash.com/photo-1544027993-37dbfe43562a?q=80&w=1200',
-      description: 'Elegant minimalist tea room with bamboo accents.'
-    },
-    {
-      id: 'scene-2',
-      name: 'Urban Cafe',
-      category: 'cafe',
-      image_url: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?q=80&w=600&auto=format&fit=crop',
-      thumbnail_url: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?q=80&w=200&h=150&auto=format&fit=crop',
-      background_url: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?q=80&w=1200',
-      description: 'Brick walls and industrial lighting for cozy vibes.'
-    },
-    {
-      id: 'scene-3',
-      name: 'Zen Workspace',
-      category: 'office',
-      image_url: 'https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=600&auto=format&fit=crop',
-      thumbnail_url: 'https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=200&h=150&auto=format&fit=crop',
-      background_url: 'https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=1200',
-      description: 'Natural light and clean lines for productivity.'
-    }
-  ];
-
   const filteredScenes = useMemo(() => {
     if (activeTab === 'products') return [];
-    return sceneTemplates.filter(scene => {
+    const scenesToFilter = dbScenes.length > 0 ? dbScenes : [];
+    return scenesToFilter.filter(scene => {
       const matchCategory = selectedCategory === 'All Scenes' || (scene.category || '').toLowerCase() === selectedCategory.toLowerCase();
       const matchSearch = (scene.name || '').toLowerCase().includes(searchQuery.toLowerCase());
       return matchCategory && matchSearch;
     });
-  }, [selectedCategory, searchQuery, activeTab]);
+  }, [selectedCategory, searchQuery, activeTab, dbScenes]);
 
   if (!isOpen) return null;
 
@@ -153,18 +148,18 @@ const DesignProductModal: React.FC<DesignProductModalProps> = ({
               {categories.map((cat) => (
                 <button
                   key={cat.name}
-                  onClick={() => setSelectedCategory(cat.name)}
+                  onClick={() => setSelectedCategory(cat.name.toLowerCase().replace(' ', '-'))}
                   className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all group ${
-                    selectedCategory === cat.name 
+                    selectedCategory === cat.name.toLowerCase().replace(' ', '-') 
                     ? 'bg-white shadow-xl shadow-gray-200/50 text-indigo-600 border border-gray-100' 
                     : 'text-gray-500 hover:bg-white hover:text-gray-900 border border-transparent'
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <cat.icon size={18} className={selectedCategory === cat.name ? 'text-indigo-600' : 'text-gray-400 group-hover:text-gray-700'} />
+                    <cat.icon size={18} className={selectedCategory === cat.name.toLowerCase().replace(' ', '-') ? 'text-indigo-600' : 'text-gray-400 group-hover:text-gray-700'} />
                     <span className="text-sm font-bold tracking-tight">{cat.name}</span>
                   </div>
-                  <ChevronRight size={14} className={`transition-transform ${selectedCategory === cat.name ? 'opacity-100' : 'opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0'}`} />
+                  <ChevronRight size={14} className={`transition-transform ${selectedCategory === cat.name.toLowerCase().replace(' ', '-') ? 'opacity-100' : 'opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0'}`} />
                 </button>
               ))}
             </nav>
@@ -199,6 +194,11 @@ const DesignProductModal: React.FC<DesignProductModalProps> = ({
               <div className="flex flex-col items-center justify-center h-96 gap-4">
                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
                  <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Warming up engines...</p>
+              </div>
+            ) : loadingScenes && activeTab === 'scenes' ? (
+              <div className="flex flex-col items-center justify-center h-96 gap-4">
+                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+                 <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Loading interior scenes...</p>
               </div>
             ) : (activeTab === 'products' ? filteredTemplates : filteredScenes).length === 0 ? (
               <div className="flex flex-col items-center justify-center h-96 opacity-30 grayscale">
@@ -254,7 +254,7 @@ const DesignProductModal: React.FC<DesignProductModalProps> = ({
                   filteredScenes.map((scene) => (
                     <div key={scene.id} className="group relative flex flex-col h-full">
                       <div className="relative aspect-[4/3] overflow-hidden bg-gray-100 rounded-[2rem] border border-gray-100 group-hover:border-indigo-200 transition-all duration-500 shadow-sm group-hover:shadow-2xl group-hover:shadow-indigo-100/50">
-                        <img src={scene.image_url} alt={scene.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                        <img src={scene.thumbnail_url} alt={scene.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
                         <div className="absolute top-4 left-4 bg-indigo-600 text-white px-3 py-1.5 rounded-2xl border border-indigo-500 shadow-sm flex items-center gap-1.5">
                           <span className="text-[10px] font-black uppercase tracking-widest">3D Orchestrator</span>
                         </div>
