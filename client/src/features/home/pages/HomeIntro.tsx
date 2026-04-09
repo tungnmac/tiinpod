@@ -22,7 +22,7 @@ const HomeIntro = () => {
   ];
 
   return (
-    <div className="pt-20 animate-in fade-in duration-700 bg-white min-h-screen">
+    <div className="animate-in fade-in duration-700 min-h-screen">
       {/* Hero Section */}
       <div className="relative h-[90vh] bg-white overflow-hidden">
         <Slider 

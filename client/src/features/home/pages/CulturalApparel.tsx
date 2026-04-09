@@ -24,7 +24,7 @@ const CulturalApparel = () => {
   ];
 
   return (
-    <div className="pt-20 animate-in fade-in duration-1000 bg-stone-50">
+    <div className="animate-in fade-in duration-1000 bg-stone-50">
       {/* Hero Slider Section */}
       <div className="relative h-[85vh] bg-stone-900 overflow-hidden">
         <Slider 

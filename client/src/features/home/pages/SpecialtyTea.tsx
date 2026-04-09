@@ -25,7 +25,7 @@ const SpecialtyTea = () => {
   ];
 
   return (
-    <div className="pt-20 animate-in fade-in duration-1000 bg-white">
+    <div className="animate-in fade-in duration-1000">
       {/* Hero Slider Section */}
       <div className="relative h-[85vh] bg-emerald-950 overflow-hidden">
         <Slider 

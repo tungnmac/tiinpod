@@ -9,7 +9,7 @@ const BrewingTeaware = () => {
   ];
 
   return (
-    <div className="pt-20 animate-in fade-in duration-700">
+    <div className="animate-in fade-in duration-700">
       <div className="relative h-[600px] bg-[#1a1a1a] flex items-center justify-center p-12">
         <div className="grid grid-cols-1 md:grid-cols-2 max-w-7xl mx-auto gap-20">
           <div className="flex flex-col justify-center text-white">

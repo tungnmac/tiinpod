@@ -34,7 +34,7 @@ const DesignSpace = () => {
   ];
 
   return (
-    <div className="pt-20 animate-in fade-in duration-700 bg-white min-h-screen">
+    <div className="animate-in fade-in duration-700 min-h-screen">
       {/* Hero Section */}
       <div className="relative overflow-hidden bg-gray-900 py-32 px-6">
         <div className="absolute inset-0 opacity-20">
