@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { X, Plus, LayoutGrid, Coffee, Laptop, Search, ChevronRight, Layout, Sparkles } from 'lucide-react';
 
 interface SceneTemplate {
-  id: string;
+  id: number; // Chuẩn hóa về number
   name: string;
   category: string;
   image_url: string;
@@ -34,7 +34,7 @@ const DesignSceneModal: React.FC<DesignSceneModalProps> = ({
 
   const sceneTemplates: SceneTemplate[] = [
     {
-      id: 'scene-1',
+      id: 1,
       name: 'Modern Tea Room',
       category: 'tea-room',
       image_url: 'https://images.unsplash.com/photo-1544027993-37dbfe43562a?q=80&w=600&auto=format&fit=crop',
@@ -43,7 +43,7 @@ const DesignSceneModal: React.FC<DesignSceneModalProps> = ({
       description: 'Elegant minimalist tea room with bamboo accents.'
     },
     {
-      id: 'scene-2',
+      id: 2,
       name: 'Urban Cafe',
       category: 'cafe',
       image_url: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?q=80&w=600&auto=format&fit=crop',
@@ -52,7 +52,7 @@ const DesignSceneModal: React.FC<DesignSceneModalProps> = ({
       description: 'Brick walls and industrial lighting for cozy vibes.'
     },
     {
-      id: 'scene-3',
+      id: 3,
       name: 'Zen Workspace',
       category: 'office',
       image_url: 'https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=600&auto=format&fit=crop',

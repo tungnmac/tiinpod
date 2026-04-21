@@ -23,13 +23,14 @@ import DesignProductModal from './components/DesignProductModal';
 import ProductMockupModal from './components/ProductMockupModal';
 import SceneDesignModal from '../scene-design/components/editor/SceneDesignModal';
 import { useCartStore } from '../../store/useCartStore';
+import { useCurrency } from '../../hooks/useCurrency';
 import toast from 'react-hot-toast';
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { items, removeItem, updateQuantity, total, clearCart } = useCartStore();
-  const [isCartOpen, setIsCartOpen] = useState(false);
+  const { formatCurrency } = useCurrency();
+  const { items, clearCart } = useCartStore(); // Added clearCart back
   const [completedSteps] = useState<number[]>([]); 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isMockupOpen, setIsMockupOpen] = useState(false);
@@ -44,12 +45,6 @@ const Dashboard = () => {
       fetchTemplates();
     }
   }, [isModalOpen]);
-
-  useEffect(() => {
-    const handleOpenCart = () => setIsCartOpen(true);
-    window.addEventListener('open-cart', handleOpenCart);
-    return () => window.removeEventListener('open-cart', handleOpenCart);
-  }, []);
 
   const fetchTemplates = async () => {
     setIsLoading(true);
@@ -87,7 +82,6 @@ const Dashboard = () => {
         icon: '🎉',
       });
       clearCart();
-      setIsCartOpen(false);
     } catch (error) {
       toast.error("Failed to create order.");
     } finally {
@@ -149,6 +143,10 @@ const Dashboard = () => {
     setIsMockupOpen(true);
   };
 
+  const handleOpenCart = () => {
+    window.dispatchEvent(new CustomEvent('open-cart'));
+  };
+
   return (
     <>
       <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 max-w-[1600px] mx-auto min-h-screen">
@@ -161,7 +159,7 @@ const Dashboard = () => {
           </div>
           <div className="flex items-center gap-3">
             <button 
-              onClick={() => setIsCartOpen(true)}
+              onClick={handleOpenCart}
               className="relative flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-700 font-bold transition-all hover:shadow-md active:scale-95"
             >
               <ShoppingCart size={20} className="text-indigo-600" />
@@ -231,7 +229,7 @@ const Dashboard = () => {
             <div className="w-full">
               <div className="bg-indigo-50 text-indigo-600 px-4 py-1 rounded-full text-xs font-bold inline-block mb-3">{t('prepaid_wallet')}</div>
               <h3 className="font-bold text-gray-900 text-lg mb-1">{t('wallet_balance')}</h3>
-              <p className="text-4xl font-black text-indigo-600 tracking-tight">$0.00</p>
+              <p className="text-4xl font-black text-indigo-600 tracking-tight">{formatCurrency(0)}</p>
             </div>
             <div className="w-full space-y-4 mt-8 text-left">
               <button className="w-full bg-gray-900 text-white py-4 rounded-2xl font-bold hover:bg-black transition-all hover:shadow-lg active:scale-95 flex items-center justify-center gap-2">
@@ -281,101 +279,6 @@ const Dashboard = () => {
           setIsModalOpen(true);
         }}
       />
-
-      {/* Cart Drawer */}
-      {isCartOpen && (
-        <div className="fixed inset-0 z-[100] flex justify-end">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsCartOpen(false)} />
-          <div className="relative w-full max-w-md bg-white h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
-            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="bg-indigo-600 p-2 rounded-xl text-white">
-                  <ShoppingCart size={24} />
-                </div>
-                <div>
-                  <h2 className="text-xl font-black text-gray-900 leading-tight">Your Cart</h2>
-                  <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">{items.length} items to checkout</p>
-                </div>
-              </div>
-              <button onClick={() => setIsCartOpen(false)} className="p-2 hover:bg-gray-100 rounded-xl transition-all">
-                <X size={24} className="text-gray-400" />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
-              {items.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-center space-y-4">
-                  <div className="bg-gray-50 p-8 rounded-full">
-                    <ShoppingCart size={48} className="text-gray-200" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-gray-900">Cart is empty</h3>
-                    <p className="text-sm text-gray-400">Start designing to add products here.</p>
-                  </div>
-                </div>
-              ) : (
-                items.map((item) => (
-                  <div key={item.id} className="flex gap-4 group">
-                    <div className="w-24 h-24 bg-gray-50 rounded-2xl overflow-hidden border border-gray-100 flex-shrink-0">
-                      <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
-                    </div>
-                    <div className="flex-1 flex flex-col justify-between py-1">
-                      <div>
-                        <div className="flex justify-between items-start">
-                          <h4 className="font-bold text-gray-900 line-clamp-1 text-left">{item.name}</h4>
-                          <button onClick={() => removeItem(item.id)} className="text-gray-300 hover:text-red-500 transition-colors">
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                        <p className="text-indigo-600 font-black text-lg text-left">${(item.price * item.quantity).toFixed(2)}</p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center bg-gray-50 rounded-lg p-1">
-                          <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="p-1 hover:bg-white rounded-md shadow-sm transition-all text-gray-600">
-                            <Minus size={14} />
-                          </button>
-                          <span className="w-8 text-center text-sm font-black text-gray-900">{item.quantity}</span>
-                          <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="p-1 hover:bg-white rounded-md shadow-sm transition-all text-gray-600">
-                            <Plus size={14} />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-
-            <div className="p-6 bg-gray-50 border-t border-gray-100 space-y-4">
-              <div className="space-y-2">
-                <div className="flex justify-between text-gray-500 font-medium">
-                  <span>Subtotal</span>
-                  <span>${total().toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-gray-900 text-xl font-black">
-                  <span>Total</span>
-                  <span>${total().toFixed(2)}</span>
-                </div>
-              </div>
-              <button 
-                onClick={handleCheckout}
-                disabled={items.length === 0 || isLoading}
-                className="w-full bg-gray-900 text-white py-4 rounded-2xl font-bold hover:bg-black transition-all hover:shadow-xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
-              >
-                {isLoading ? (
-                  <RefreshCcw size={20} className="animate-spin" />
-                ) : (
-                  <>
-                    <CheckoutIcon size={20} />
-                    Complete Checkout
-                  </>
-                )}
-              </button>
-              <p className="text-[10px] text-gray-400 text-center font-bold uppercase tracking-widest leading-none">Secure encrypted payment processing</p>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 };

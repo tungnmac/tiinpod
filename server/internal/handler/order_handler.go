@@ -37,7 +37,9 @@ func (h *OrderHandler) Create(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if err := h.service.Create(&item); err != nil {
+
+	// Use ProcessCheckout to handle inventory and transactional logic
+	if err := h.service.ProcessCheckout(&item); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

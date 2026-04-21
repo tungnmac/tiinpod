@@ -55,7 +55,7 @@ export const SceneDesignModal: React.FC<SceneDesignModalProps> = ({
   const canvasCaptureRef = useRef<HTMLDivElement>(null);
 
   const currentTemplate = initialTemplate || {
-      id: 'default-scene',
+      id: 0,
       name: 'Modern Tea Room',
       category: 'tea-room',
       thumbnail_url: 'https://images.unsplash.com/photo-1544027993-37dbfe43562a?q=80&w=200&h=150&auto=format&fit=crop',

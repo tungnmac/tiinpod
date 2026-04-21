@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { User, Settings, LogOut, ChevronDown, Bell, ShoppingCart, Globe, Check, Info, AlertTriangle } from 'lucide-react';
 import { useCartStore } from '../../store/useCartStore';
+import { useAuthStore } from '../../store/useAuthStore';
 
 const Navbar = () => {
   const { i18n, t } = useTranslation();
@@ -9,6 +10,7 @@ const Navbar = () => {
   const [isLangOpen, setIsLangOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const { items } = useCartStore();
+  const { user, clearAuth } = useAuthStore();
   
   const dropdownRef = useRef<HTMLDivElement>(null);
   const langRef = useRef<HTMLDivElement>(null);
@@ -32,7 +34,7 @@ const Navbar = () => {
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem('access_token');
+    clearAuth();
     window.location.href = '/login';
   };
 
@@ -143,18 +145,20 @@ const Navbar = () => {
                 )}
               </div>
 
-              {/* Shopping Cart Button */}
+              {/* Cart Button */}
               <button 
-                type="button" 
                 onClick={handleOpenCart}
-                className="p-2 text-gray-500 rounded-lg hover:text-indigo-600 hover:bg-indigo-50 transition-colors relative"
+                className="relative p-2 text-gray-500 rounded-lg hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                title="View Cart"
               >
-                <ShoppingCart className="w-6 h-6" />
-                {items.length > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-black leading-none text-white bg-indigo-600 rounded-full animate-in zoom-in">
-                    {items.length}
-                  </span>
-                )}
+                <div className="relative">
+                  <ShoppingCart className="w-6 h-6" />
+                  {items.length > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center border-2 border-white animate-in zoom-in duration-300">
+                      {items.length}
+                    </span>
+                  )}
+                </div>
               </button>
 
               <div className="h-6 w-px bg-gray-200 mx-1 md:mx-2"></div>
@@ -167,10 +171,10 @@ const Navbar = () => {
                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                     className="flex items-center gap-2 text-sm bg-white rounded-full focus:ring-4 focus:ring-gray-200 transition-all p-1 hover:bg-gray-50"
                   >
-                    <img className="w-8 h-8 rounded-full border border-gray-200" src="https://ui-avatars.com/api/?name=Admin&background=6366f1&color=fff" alt="user photo" />
+                    <img className="w-8 h-8 rounded-full border border-gray-200" src={user?.avatar || `https://ui-avatars.com/api/?name=${user?.username || 'User'}&background=6366f1&color=fff`} alt="user photo" />
                     <div className="hidden md:block text-left mr-1">
-                      <p className="text-xs font-semibold text-gray-700">Admin TiinPod</p>
-                      <p className="text-[10px] text-gray-400">admin@tiinpod.com</p>
+                      <p className="text-xs font-semibold text-gray-700">{user?.username || 'Guest'}</p>
+                      <p className="text-[10px] text-gray-400">{user?.email || 'No email'}</p>
                     </div>
                     <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
                   </button>
@@ -180,8 +184,8 @@ const Navbar = () => {
                 {isDropdownOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50 animate-in fade-in zoom-in duration-200">
                     <div className="px-4 py-3 border-b border-gray-50 md:hidden">
-                      <p className="text-sm font-semibold text-gray-800">Admin TiinPod</p>
-                      <p className="text-xs text-gray-500 truncate">admin@tiinpod.com</p>
+                      <p className="text-sm font-semibold text-gray-800">{user?.username || 'Guest'}</p>
+                      <p className="text-xs text-gray-500 truncate">{user?.email || 'No email'}</p>
                     </div>
                     
                     <a href="/profile" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors">

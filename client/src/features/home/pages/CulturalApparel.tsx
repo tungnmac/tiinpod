@@ -1,14 +1,44 @@
 import React from 'react';
 import { ShoppingBag, ArrowRight, UserCheck, Scissors, Ruler, 
   Shirt, Palette, Zap, Globe, Heart, ShieldCheck, 
-  Play, Youtube, Instagram, Twitter, MessageSquare, Star, Quote, ChevronRight 
+  Play, Youtube, Instagram, Twitter, MessageSquare, Star, Quote, ChevronRight, ShoppingCart 
 } from 'lucide-react';
 import Slider from '../../../components/common/Slider';
+import { useCartStore } from '../../../store/useCartStore';
+import { useCurrency } from '../../../hooks/useCurrency';
+import toast from 'react-hot-toast';
 
 const CulturalApparel = () => {
-  const lookbookVideos = [
-    { title: 'The Zen of Silk', img: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=1200' },
-    { title: 'Modern Heritage', img: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=1200' }
+  const { addItem } = useCartStore();
+  const { formatCurrency } = useCurrency();
+
+  const handleAddToCart = (product: any) => {
+    addItem({
+      id: product.id, // Chuẩn hóa về number, id phải là số thực tế từ DB
+      name: product.name,
+      price: parseFloat(product.price || "89.00"),
+      currency: 'USD',
+      image: product.image || product.img,
+      quantity: 1
+    });
+    
+    toast.success(`${product.name} added to cart!`, {
+      style: {
+        background: '#78350f',
+        color: '#fff',
+        fontWeight: 'bold',
+        fontSize: '10px'
+      },
+      icon: '🥋'
+    });
+
+    window.dispatchEvent(new CustomEvent('open-cart'));
+  };
+
+  const apparelItems = [
+    { id: 109, name: 'Zen Monk Robe', price: '129.00', currency: 'USD', image: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=800' },
+    { id: 110, name: 'Minimalist Kimono', price: '189.00', currency: 'USD', image: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=800' },
+    { id: 111, name: 'Heritage Silk Shirt', price: '155.00', currency: 'USD', image: 'https://images.unsplash.com/photo-1598033129183-c4f50c7176c8?q=80&w=800' },
   ];
 
   const clientReviews = [
@@ -23,54 +53,49 @@ const CulturalApparel = () => {
     { name: 'Meditation Zen', category: 'Incense', img: 'https://images.unsplash.com/photo-1602847280244-644788f4078a?q=80&w=400' }
   ];
 
+  const lookbookVideos = [
+    // ...existing code...
+    { title: 'The Zen of Silk', img: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=1200' },
+    { title: 'Modern Heritage', img: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=1200' }
+  ];
+
   return (
     <div className="animate-in fade-in duration-1000 bg-stone-50">
-      {/* Hero Slider Section */}
-      <div className="relative h-[85vh] bg-stone-900 overflow-hidden">
-        <Slider 
-          autoPlay={true}
-          interval={5500}
-          className="h-full w-full"
-          items={[
-            <div className="relative h-full w-full flex items-center justify-center bg-stone-950">
-              <div className="absolute inset-0 z-0 h-full w-full">
-                <img src="https://images.unsplash.com/photo-1543163521-1bf539c55dd2?q=80&w=2000" className="w-full h-full object-cover scale-110" alt="Apparel Slide 1" />
-                <div className="absolute inset-0 bg-stone-900/40"></div>
-              </div>
-              <div className="relative z-10 max-w-7xl mx-auto px-10">
-                <div className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-amber-500/10 border border-amber-500/20 mb-10">
-                    <Shirt size={14} className="text-amber-500" />
-                    <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest italic">Spring Collection</span>
-                </div>
-                <h1 className="text-7xl md:text-[10rem] font-black text-white uppercase italic leading-[0.8] tracking-tighter mb-10">Cultural<br/>Apparel</h1>
-                <p className="text-xl md:text-2xl text-stone-400 font-medium max-w-2xl leading-relaxed mb-14">Wearable tradition. Blending heritage silks with modern silhouettes.</p>
-                <button className="px-14 py-6 bg-amber-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-700 transition-all hover:shadow-[0_20px_40px_-10px_rgba(217,119,6,0.5)]">Shop the Look</button>
-              </div>
-            </div>,
-            <div className="relative h-full w-full flex items-center justify-center bg-stone-900">
-              <div className="absolute inset-0 z-0 h-full w-full">
-                <img src="https://images.unsplash.com/photo-1512436991641-6745cdb1723f?q=80&w=2000" className="w-full h-full object-cover" alt="Apparel Slide 2" />
-                <div className="absolute inset-0 bg-black/30"></div>
-              </div>
-              <div className="relative z-10 max-w-4xl mx-auto px-10 text-right">
-                <h2 className="text-6xl md:text-9xl font-black text-amber-500 uppercase italic tracking-tighter mb-8 leading-[0.9]">Zen<br/>Streetwear</h2>
-                <p className="text-xl text-stone-300 mb-10 ml-auto max-w-lg">Minimalist designs for the modern urban wanderer, inspired by monk aesthetics.</p>
-                <button className="px-12 py-5 bg-white text-black rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-amber-500 transition-all">View Lookbook</button>
-              </div>
-            </div>,
-            <div className="relative h-full w-full flex items-center justify-center bg-stone-950">
-              <div className="absolute inset-0 z-0 h-full w-full">
-                <img src="https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?q=80&w=2000" className="w-full h-full object-cover" alt="Apparel Slide 3" />
-                <div className="absolute inset-0 bg-stone-950/50"></div>
-              </div>
-              <div className="relative z-10 max-w-5xl mx-auto px-10">
-                <h2 className="text-6xl md:text-[8rem] font-black text-white uppercase italic tracking-tighter mb-10 leading-[0.85]">Silk &<br/>Design</h2>
-                <p className="text-xl text-amber-100/70 mb-14 mx-auto max-w-2xl">Traditional Souchong silk meets 3D structural generative modeling.</p>
-                <button className="px-12 py-5 bg-white text-amber-950 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-amber-500 transition-all">Material Archives</button>
-              </div>
+      {/* Featured Items Grid */}
+      <div className="py-24 bg-stone-100/50">
+        <div className="max-w-7xl mx-auto px-10">
+          <div className="flex flex-col md:flex-row justify-between items-end mb-24 gap-12">
+            <div>
+              <span className="text-[10px] font-black text-amber-700 uppercase tracking-[0.3em] mb-4 block">New Arrivals</span>
+              <h2 className="text-6xl font-black text-stone-900 uppercase italic tracking-tighter">Garment Archive</h2>
             </div>
-          ]}
-        />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-16">
+            {apparelItems.map((item, i) => (
+              <div key={i} className="group">
+                <div className="aspect-[4/6] overflow-hidden rounded-[3rem] mb-10 shadow-2xl relative bg-stone-200">
+                  <img src={item.image} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" alt={item.name} />
+                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-12">
+                    <button 
+                      onClick={() => handleAddToCart(item)}
+                      className="w-full py-5 bg-white text-stone-900 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-amber-500 transition-all flex items-center justify-center gap-3"
+                    >
+                      <ShoppingCart size={16} /> Add to Cart
+                    </button>
+                  </div>
+                </div>
+                <div className="flex justify-between items-start px-4">
+                  <div>
+                    <h3 className="text-xl font-black text-stone-900 uppercase italic tracking-tight mb-2">{item.name}</h3>
+                    <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest italic">Spring 2026</p>
+                  </div>
+                  <p className="text-2xl font-black text-stone-700">{formatCurrency(parseFloat(item.price), item.currency || 'USD')}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Experience Section - Lookbook Video */}

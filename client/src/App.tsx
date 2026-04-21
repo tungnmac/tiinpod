@@ -10,6 +10,7 @@ import BaseTemplateDetail from './features/product/BaseTemplateDetail';
 import UpdateBaseTemplate from './features/product/UpdateBaseTemplate';
 import OrdersList from './features/order/OrdersList';
 import OrderDetail from './features/order/OrderDetail';
+import Checkout from './features/order/Checkout';
 import StoresList from './features/store/StoresList';
 import CategoriesList from './features/category/CategoriesList';
 import MainLayout from './components/layout/MainLayout';
@@ -42,6 +43,7 @@ const ProtectedLayout = () => {
         <Route path="/products/:id/edit" element={<UpdateProduct />} />
         <Route path="/orders" element={<OrdersList />} />
         <Route path="/orders/:id" element={<OrderDetail />} />
+        <Route path="/checkout" element={<Checkout />} />
         <Route path="/stores" element={<StoresList />} />
         <Route path="/categories" element={<CategoriesList />} />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />

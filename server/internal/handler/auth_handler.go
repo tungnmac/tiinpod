@@ -110,6 +110,13 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message":      "Đăng nhập thành công",
 		"access_token": accessToken,
+		"user": gin.H{
+			"id":       user.ID,
+			"username": user.Username,
+			"email":    user.Email,
+			"role":     user.Role,
+			"avatar":   user.Avatar,
+		},
 	})
 }
 

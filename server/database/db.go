@@ -64,6 +64,7 @@ func Migrate() {
 		&model.UserTemplate{},
 		&model.SceneTemplate{},
 		&model.SceneAsset{},
+		&model.PaymentMethod{},
 	)
 	if err != nil {
 		log.Fatalf("Lỗi migrate: %v", err)

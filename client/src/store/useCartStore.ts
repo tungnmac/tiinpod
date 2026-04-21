@@ -2,11 +2,13 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 export interface CartItem {
-  id: string;
-  templateId: number;
+  id: number; // Đổi từ string sang number để đồng nhất với Backend
   name: string;
   price: number;
+  currency?: string;
+  exchangeRate?: number;
   image: string;
+  sku?: string;
   quantity: number;
   designData?: any;
 }
@@ -14,8 +16,8 @@ export interface CartItem {
 interface CartState {
   items: CartItem[];
   addItem: (item: CartItem) => void;
-  removeItem: (id: string) => void;
-  updateQuantity: (id: string, quantity: number) => void;
+  removeItem: (id: number) => void;
+  updateQuantity: (id: number, quantity: number) => void;
   clearCart: () => void;
   total: () => number;
 }
@@ -26,20 +28,30 @@ export const useCartStore = create<CartState>()(
       items: [],
       addItem: (item: CartItem) => {
         const currentItems = get().items;
-        const existingItem = currentItems.find((i: CartItem) => i.id === item.id);
+        
+        // Auto-generate numeric ID if not provided or 0
+        let finalItem = { ...item };
+        if (!finalItem.id || finalItem.id <= 0) {
+          const maxId = currentItems.length > 0 
+            ? Math.max(...currentItems.map(i => i.id)) 
+            : 0;
+          finalItem.id = maxId + 1;
+        }
+
+        const existingItem = currentItems.find((i: CartItem) => i.id === finalItem.id);
         if (existingItem) {
           set({
             items: currentItems.map((i: CartItem) =>
-              i.id === item.id ? { ...i, quantity: i.quantity + item.quantity } : i
+              i.id === finalItem.id ? { ...i, quantity: i.quantity + finalItem.quantity } : i
             ),
           });
         } else {
-          set({ items: [...currentItems, item] });
+          set({ items: [...currentItems, finalItem] });
         }
       },
-      removeItem: (id: string) =>
+      removeItem: (id: number) =>
         set({ items: get().items.filter((i: CartItem) => i.id !== id) }),
-      updateQuantity: (id: string, quantity: number) =>
+      updateQuantity: (id: number, quantity: number) =>
         set({
           items: get().items.map((i: CartItem) =>
             i.id === id ? { ...i, quantity: Math.max(1, quantity) } : i

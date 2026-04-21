@@ -42,6 +42,7 @@ export interface ProductTemplate {
   provider: string; // Changed from vendor
   base_price: number;
   price: number; // For UI display and updates
+  currency: string; // Added currency field
   default_profit: number;
   rating: number;
   review_count: number;
@@ -67,6 +68,7 @@ export interface UserTemplate {
     sku: string;
     image_url: string;
     base_price: number;
+    currency: string;
     default_profit: number;
     rating: number;
     review_count: number;

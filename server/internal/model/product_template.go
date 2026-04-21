@@ -1,16 +1,7 @@
 package model
 
-import (
-	"time"
-
-	"gorm.io/gorm"
-)
-
 type ProductTemplate struct {
-	ID        uint           `gorm:"primarykey" json:"id"`
-	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
+	BaseModel
 
 	Name          string        `gorm:"size:255;not null" json:"name"`
 	SKU           string        `gorm:"size:100;uniqueIndex" json:"sku"`

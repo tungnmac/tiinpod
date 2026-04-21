@@ -116,7 +116,7 @@ const OrdersList: React.FC = () => {
                       </td>
                       <td className="px-6 py-5">
                         <span className="font-black text-gray-900 text-sm">
-                          {formatCurrency(order.final_amount || 0)}
+                          {formatCurrency(order.final_amount || 0, order.currency || 'USD')}
                         </span>
                       </td>
                       <td className="px-8 py-5 text-right">

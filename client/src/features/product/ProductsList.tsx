@@ -125,11 +125,11 @@ const ProductsList: React.FC = () => {
                       <td className="px-6 py-4">
                         <div className="flex flex-col">
                           <span className="font-black text-indigo-600 text-sm">
-                            {formatCurrency(p.price || 0)}
+                            {formatCurrency(p.price || 0, p.currency, p.exchange_rate)}
                           </span>
                           {p.original_price > p.price && (
                             <span className="text-[10px] text-gray-400 line-through font-bold">
-                              {formatCurrency(p.original_price)}
+                              {formatCurrency(p.original_price, p.currency, p.exchange_rate)}
                             </span>
                           )}
                         </div>

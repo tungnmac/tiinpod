@@ -141,7 +141,7 @@ const PublicTemplatesList: React.FC = () => {
                     </td>
                     <td className="px-6 py-5 font-bold text-gray-700">{template.provider || 'N/A'}</td>
                     <td className="px-6 py-5 text-gray-500 font-medium">{template.variants || 0}</td>
-                    <td className="px-6 py-5 font-black text-indigo-600">{formatCurrency(template.base_price || 0)}</td>
+                    <td className="px-6 py-5 font-black text-indigo-600">{formatCurrency(template.base_price || 0, template.currency || 'USD')}</td>
                     <td className="px-8 py-5 text-right">
                       <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all transform translate-x-4 group-hover:translate-x-0">
                         <button 

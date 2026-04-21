@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../services/api';
+import { useAuthStore } from '../../store/useAuthStore';
 
 const AuthPage = () => {
   const { t } = useTranslation();
@@ -10,13 +11,16 @@ const AuthPage = () => {
   const [password, setPassword] = useState('123456');
   const [name, setName] = useState('');
   const navigate = useNavigate();
+  const setAuth = useAuthStore((state) => state.setAuth);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       if (isLogin) {
         const res = await api.post('/auth/login', { username, password });
-        localStorage.setItem('access_token', res.data.access_token);
+        // res.data should contain user object and access_token
+        const { user, access_token } = res.data;
+        setAuth(user, access_token);
         navigate('/dashboard');
       } else {
         await api.post('/auth/register', { name, username, password });

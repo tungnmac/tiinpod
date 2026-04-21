@@ -592,8 +592,7 @@ export const ProductMockupModal: React.FC<ProductMockupModalProps> = ({
 
       // Add to Cart
       useCartStore.getState().addItem({
-        id: `design_${initialDesign?.id || Date.now()}`,
-        templateId: currentTemplate.id,
+        id: initialDesign?.id || 0, // Let store generate incremental ID if 0
         name: currentTemplate.name,
         price: currentTemplate.price,
         image: primaryPreviewUrl,

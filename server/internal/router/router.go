@@ -98,6 +98,14 @@ func (r *Router) RegisterRoutes(engine *gin.Engine) {
 				orders.POST("", r.Handlers.Order.Create)
 				orders.GET("", r.Handlers.Order.GetAll)
 			}
+
+			payments := protected.Group("/payments")
+			{
+				payments.GET("/methods", r.Handlers.Payment.GetSavedMethods)
+				payments.GET("/method", r.Handlers.Payment.GetCurrentMethod)
+				payments.POST("/methods", r.Handlers.Payment.SaveMethod)
+				payments.POST("/verify-card", r.Handlers.Payment.VerifyCard) // New endpoint placeholder
+			}
 		}
 
 		// Scene Design Endpoints (Public)

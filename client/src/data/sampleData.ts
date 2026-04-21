@@ -15,6 +15,7 @@ export const sampleTemplate: ProductTemplate = {
   provider: "Printify",
   base_price: 12.50,
   price: 25.00,
+  currency: "USD",
   default_profit: 12.50,
   rating: 4.8,
   review_count: 1250,

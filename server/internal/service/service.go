@@ -23,7 +23,7 @@ func NewServices(repos *repository.Repositories) *Services {
 		Category:        NewCategoryService(repos.Category),
 		Product:         NewProductService(repos.Product),
 		ProductTemplate: NewProductTemplateService(repos.ProductTemplate),
-		Order:           NewOrderService(repos.Order),
+		Order:           NewOrderService(repos.Order, repos.Product, repos.Inventory),
 		Shipment:        NewShipmentService(repos.Shipment),
 		Inventory:       NewInventoryService(repos.Inventory),
 		Cart:            NewCartService(repos.Cart),
